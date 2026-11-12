@@ -141,6 +141,7 @@ h2{margin:0;font-size:17px;font-weight:700}
 .field .seg{align-self:flex-start;background:var(--bg)}
 .row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end}
 .row3{display:grid;grid-template-columns:minmax(90px,auto) minmax(0,1fr);gap:12px;align-items:end}
+.currency-fields{align-items:start}
 .in{width:100%;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:15px}
 textarea.in{min-height:76px;resize:vertical;font-family:var(--font-num);font-size:14px}
 .sessions{display:flex;flex-direction:column;gap:10px}
@@ -423,9 +424,15 @@ details.manual textarea{margin:8px 0 4px}
       <p class="imp-status" id="share-status" aria-live="polite" hidden></p>
     </div>
     <label class="field"><span data-i18n="fSchool" data-i18n-year="fSchoolYear">学校 / 学期名称</span><input class="in" id="f-school" maxlength="60"></label>
-    <div class="row3">
-      <label class="field"><span data-i18n="fCurrency">货币符号</span><input class="in" id="f-currency" maxlength="4"></label>
-      <label class="field"><span data-i18n="fTuition" data-i18n-year="fTuitionYear">这段时间的总学费</span><input class="in num" id="f-tuition" type="number" min="0" step="any" inputmode="decimal"></label>
+    <div class="row2 currency-fields">
+      <div class="field">
+        <label class="field"><span data-i18n="fCurrency">币种</span><select class="in" id="f-currency-code"></select></label>
+        <label class="field" id="custom-currency-field" hidden><span data-i18n="fCustomCurrency">自定义符号</span><input class="in" id="f-currency" maxlength="4"></label>
+      </div>
+      <div class="field">
+        <label class="field"><span data-i18n="fTuition" data-i18n-year="fTuitionYear">这段时间的总学费</span><input class="in num" id="f-tuition" type="number" min="0" step="any" inputmode="decimal" aria-describedby="currency-amount-hint"></label>
+        <small id="currency-amount-hint" data-i18n="currencyAmountHint">学费和换算单价均按所选币种填写。</small>
+      </div>
     </div>
     <div class="row2">
       <label class="field"><span data-i18n="fStart" data-i18n-year="fStartYear">开学日期</span><input class="in" id="f-start" type="date"></label>
@@ -669,7 +676,9 @@ sTitle:['学费和课表','學費和課表','Tuition & schedule','学費と時�
 close:['关闭','關閉','Close','閉じる','닫기'],
 fSchool:['学校 / 学期名称','學校 / 學期名稱','School / term name','学校・学期名','학교 / 학기 이름'],
 fSchoolYear:['学校 / 学年名称','學校 / 學年名稱','School / school year name','学校・学年名','학교 / 학년 이름'],
-fCurrency:['货币符号','貨幣符號','Currency','通貨記号','통화 기호'],
+fCurrency:['币种','幣別','Currency','通貨','통화'],
+fCustomCurrency:['自定义符号','自訂符號','Custom symbol','記号を指定','사용자 지정 기호'],
+currencyAmountHint:['学费和换算单价均按所选币种填写。','學費與換算單價皆以所選幣別填寫。','Enter tuition and the item price in the selected currency.','学費と換算単価は選んだ通貨で入力します。','등록금과 환산 단가는 선택한 통화로 입력하세요.'],
 fTuition:['这段时间的总学费','這段時間的總學費','Total tuition for this period','この期間の学費合計','이 기간의 총 등록금'],
 fStart:['开学日期','開學日期','First day','開始日','개강일'],
 fEnd:['结课日期','結課日期','Last day','終了日','종강일'],
@@ -836,6 +845,11 @@ try{if(localStorage.getItem(PERIOD_STORE)==='year')period='year'}catch(e){}
 const isYear=()=>period==='year';
 const periodStorageKey=key=>isYear()?key+'-year':key;
 const DAYS=[1,2,3,4,5,6,0]; // Monday first
+const CURRENCIES=new Map([
+  ['CNY','¥'],['USD','US$'],['JPY','JP¥'],['KRW','₩'],
+  ['HKD','HK$'],['MOP','MOP$'],['EUR','€'],['GBP','£'],['CHF','CHF\u00a0'],
+  ['CAD','CA$'],['AUD','A$'],['SGD','S$'],['TWD','NT$']
+]);
 const $=id=>document.getElementById(id);
 const clone=o=>JSON.parse(JSON.stringify(o));
 const isDay=c=>c.mode==='day';
@@ -887,7 +901,7 @@ function whenLabel(ts,now){
 function defaultCfg(){
   const year=isYear();
   return {
-    school:t(year?'exYearSchool':'exSchool'),currency:'¥',tuition:year?52000:26000,
+    school:t(year?'exYearSchool':'exSchool'),currency:'¥',currencyCode:'CNY',tuition:year?52000:26000,
     start:'2026-09-07',end:year?'2027-06-30':'2027-01-15',
     holidays:'2026-10-01~2026-10-07\n2027-01-01'+(year?'\n2027-01-16~2027-02-21':''),
     item:t('exItem'),itemPrice:18,
@@ -900,6 +914,11 @@ function defaultCfg(){
   };
 }
 function norm(c){
+  if(typeof c.currency!=='string'||!c.currency.trim())c.currency='¥';
+  if(c.currencyCode!=='custom'&&!CURRENCIES.has(c.currencyCode)){
+    c.currencyCode=[...CURRENCIES].find(([,symbol])=>symbol===c.currency)?.[0]||'custom';
+  }
+  c.currency=CURRENCIES.get(c.currencyCode)||c.currency;
   if(c.mode!=='day')c.mode='class';
   if(!c.dayStart)c.dayStart='08:00';
   if(!c.dayEnd)c.dayEnd='17:30';
@@ -1149,6 +1168,21 @@ function renderStatic(){
   refreshTT();
 }
 
+function renderCurrencyOptions(){
+  const select=$('f-currency-code'),selected=select.value||'CNY';
+  const names=typeof Intl.DisplayNames==='function'?new Intl.DisplayNames(LOCALES[LI],{type:'currency'}):null;
+  const overrides=LI===0?{HKD:'港币',MOP:'澳门元'}:{};
+  select.textContent='';
+  for(const code of [...CURRENCIES.keys(),'custom']){
+    const option=document.createElement('option');
+    const label=code==='custom'?t('fCustomCurrency'):overrides[code]||names?.of(code);
+    option.value=code;
+    option.textContent=code==='custom'||!label||label===code?label||code:label+' ('+code+')';
+    select.appendChild(option);
+  }
+  select.value=selected;
+}
+
 /* fill every element marked data-i18n / data-i18n-aria / data-i18n-ph */
 function applyI18n(){
   document.documentElement.lang=LOCALES[LI];
@@ -1159,6 +1193,7 @@ function applyI18n(){
   });
   document.querySelectorAll('[data-i18n-aria]').forEach(el=>{el.setAttribute('aria-label',t(el.dataset.i18nAria))});
   document.querySelectorAll('[data-i18n-ph]').forEach(el=>{el.placeholder=t(el.dataset.i18nPh)});
+  renderCurrencyOptions();
   $('imp-hint').textContent=t(sampleFn?'holHintAI':'holHint');
   $('year-holidays-hint').hidden=!isYear();
   $('year-timetable-hint').hidden=!isYear();
@@ -1247,9 +1282,14 @@ function dayBoxes(prefix,suffix,checked){ // seven weekday toggles, Monday first
   }
   return frag;
 }
+function syncCurrencyField(){
+  $('custom-currency-field').hidden=$('f-currency-code').value!=='custom';
+}
 function fillForm(){
   $('f-school').value=draft.school||'';
+  $('f-currency-code').value=draft.currencyCode;
   $('f-currency').value=draft.currency||'¥';
+  syncCurrencyField();
   $('f-tuition').value=draft.tuition||'';
   $('f-start').value=draft.start||'';
   $('f-end').value=draft.end||'';
@@ -1301,7 +1341,8 @@ function renderSessions(){
 }
 function readForm(){
   draft.school=$('f-school').value.trim();
-  draft.currency=$('f-currency').value.trim()||'¥';
+  draft.currencyCode=$('f-currency-code').value;
+  draft.currency=CURRENCIES.get(draft.currencyCode)||$('f-currency').value.trim()||'¥';
   draft.tuition=parseFloat($('f-tuition').value)||0;
   draft.start=$('f-start').value;draft.end=$('f-end').value;
   draft.holidays=$('f-holidays').value;
@@ -1328,6 +1369,7 @@ function preview(){
 function onFormChange(e){
   if(!draftIsOpen(draft))return;
   readForm();
+  if(e.target.id==='f-currency-code')syncCurrencyField();
   if(e&&e.target&&e.target.id==='f-holidays'){hset=parseHolidays(draft.holidays).set;renderChips()}
   renderCal();preview();
 }
