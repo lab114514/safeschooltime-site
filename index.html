@@ -1,0 +1,1834 @@
+<title>学费计价器</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one column like a taxi meter — the running fare on top, then today's price list, then the method. */
+/* Palette: white and orange, one look in both light and dark system themes (chosen by the owner). */
+:root{
+  color-scheme:light;
+  --bg:#FFF7EE;
+  --surface:#FFFFFF;
+  --ink:#2B1A0D;
+  --muted:#86694F;
+  --line:#F2DCC6;
+  --accent:#DD5207;
+  --burn:#C2410C;
+  --good:#1D7F55;
+  --warn-bg:#FFEBD3;
+  --shadow:0 1px 2px rgba(120,60,10,.05),0 8px 24px rgba(120,60,10,.07);
+  --scrim:rgba(43,26,13,.4);
+  /* the CJK fallback follows the page language so Han characters get the right regional shapes */
+  --cjk:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC";
+  --font-num:"Space Grotesk",var(--cjk),system-ui,sans-serif;
+  --font-body:var(--cjk),system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+/* Black theme. White-orange stays the default whatever the system says; the page's own
+   switcher sets data-tm-theme to "dark", or to "auto" to follow the system setting. */
+:root[data-tm-theme="dark"]{
+  --bg:#0C0B0A;--surface:#171513;--ink:#F5EDE4;--muted:#A8937F;--line:#2E2924;
+  --accent:#F47A2A;--burn:#FF9447;--good:#4FC48C;--warn-bg:#2B1B0E;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);--scrim:rgba(0,0,0,.6);color-scheme:dark}
+@media (prefers-color-scheme:dark){:root[data-tm-theme="auto"]{
+  --bg:#0C0B0A;--surface:#171513;--ink:#F5EDE4;--muted:#A8937F;--line:#2E2924;
+  --accent:#F47A2A;--burn:#FF9447;--good:#4FC48C;--warn-bg:#2B1B0E;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);--scrim:rgba(0,0,0,.6);color-scheme:dark}}
+:root:lang(zh-TW){--cjk:"PingFang TC","Microsoft JhengHei","Noto Sans TC"}
+:root:lang(ja){--cjk:"Hiragino Sans","Yu Gothic UI","Meiryo","Noto Sans JP"}
+:root:lang(ko){--cjk:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR"}
+:root:lang(en){--cjk:system-ui}
+
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.55}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.wrap{max-width:980px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+.label{font-size:12.5px;color:var(--muted);letter-spacing:.04em}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.eyebrow{font-family:var(--font-num);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h1{margin:2px 0 0;font-size:clamp(20px,3.4vw,26px);font-weight:700;letter-spacing:.01em;text-wrap:balance}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lang{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--surface)}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.pill[data-k="class"]{color:var(--burn);border-color:color-mix(in srgb,var(--burn) 40%,var(--line))}
+.pill[data-k="class"] i{background:var(--burn);animation:pulse 1.4s ease-in-out infinite}
+.pill[data-k="break"] i{background:var(--good)}
+@keyframes pulse{50%{opacity:.25}}
+.btn{border:1px solid var(--line);background:var(--surface);padding:7px 14px;border-radius:8px;font-size:14px;font-weight:500}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08);color:var(--surface)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.seg{display:inline-flex;flex-wrap:wrap;gap:2px;padding:2px;border:1px solid var(--line);border-radius:9px;background:var(--surface)}
+.seg button{border:0;background:none;padding:5px 12px;border-radius:7px;font-size:14px;font-weight:500;color:var(--muted)}
+.seg button:hover{color:var(--accent)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface);font-weight:600}
+.note{margin:0;padding:10px 14px;border-radius:8px;background:var(--warn-bg);font-size:14px}
+.note button{border:0;background:none;padding:0;color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+
+/* meter */
+.meter{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:clamp(18px,3.5vw,32px);display:flex;flex-direction:column;gap:22px}
+.meter-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline}
+.class-name{font-size:14px;font-weight:600}
+.meter-main{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:14px 24px}
+.amount{min-width:0;display:flex;flex-direction:column;gap:6px}
+.amount.right{text-align:right;align-items:flex-end}
+/* the two amounts share one style on purpose: same size, weight and colour */
+.amount-num{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700;font-size:clamp(34px,6.6vw,68px);line-height:1;letter-spacing:-.02em;color:var(--ink);overflow-wrap:anywhere}
+.cur{font-size:.42em;font-weight:600;margin-right:.12em;color:var(--burn);letter-spacing:0}
+.stats3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;border-top:1px solid var(--line);padding-top:18px}
+.stats3 b{display:block;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:clamp(17px,2.6vw,22px);font-weight:600;margin-top:2px}
+.prog-top{display:flex;justify-content:space-between;margin-bottom:8px}
+.prog-top b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:600}
+.bar{position:relative;height:12px;border-radius:6px;background:color-mix(in srgb,var(--line) 70%,var(--surface));overflow:hidden}
+.bar .fill{position:absolute;inset:0 auto 0 0;width:0;background:var(--accent);border-radius:6px}
+.bar .ticks{position:absolute;inset:0;background-image:repeating-linear-gradient(to right,transparent 0 calc(var(--tick,10%) - 1px),color-mix(in srgb,var(--surface) 70%,transparent) calc(var(--tick,10%) - 1px) var(--tick,10%))}
+.prog-foot{margin-top:6px;font-size:12px;color:var(--muted)}
+.ticker{margin:0;min-height:1.6em;font-size:15px;color:var(--muted);transition:opacity .35s}
+.ticker.fade{opacity:0}
+
+/* totals */
+.totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.tile b{display:block;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:clamp(18px,2.4vw,24px);font-weight:600;margin-top:2px;overflow-wrap:anywhere}
+.tile .mini{height:5px;border-radius:3px;background:var(--line);margin-top:10px;overflow:hidden}
+.tile .mini span{display:block;height:100%;background:var(--accent);width:0}
+.tile.burn b{color:var(--burn)}
+.tile .sub{display:block;font-size:12px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+
+/* today price list */
+section.today{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px clamp(16px,3vw,24px)}
+.today-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 16px;margin-bottom:6px}
+h2{margin:0;font-size:17px;font-weight:700}
+.rates{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.rates b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+.plist{list-style:none;margin:0;padding:0}
+.plist li{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:baseline;padding:11px 0;border-bottom:1px dashed var(--line)}
+.plist li:last-child{border-bottom:0}
+.plist .t{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted)}
+.plist .n{min-width:0;overflow-wrap:anywhere}
+.plist .p{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.plist .s{grid-column:2/4;font-size:12.5px;color:var(--muted)}
+.plist li.done .p{color:var(--muted)}
+.plist li.now .p,.plist li.now .s{color:var(--burn)}
+.plist .empty{display:block;color:var(--muted);border:0}
+
+.foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+.foot p{margin:0;max-width:62ch}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:8px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+
+/* settings drawer */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:20;display:flex;justify-content:flex-end}
+.panel{background:var(--surface);width:min(560px,100%);height:100%;overflow-y:auto;padding-block:calc(20px + env(safe-area-inset-top,0px)) calc(24px + env(safe-area-inset-bottom,0px));padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px;box-shadow:-8px 0 30px rgba(0,0,0,.2)}
+.panel-head{display:flex;justify-content:space-between;align-items:center}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>span{font-size:13px;font-weight:600}
+.field small{color:var(--muted);font-size:12px}
+.field .seg{align-self:flex-start;background:var(--bg)}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end}
+.row3{display:grid;grid-template-columns:minmax(90px,auto) minmax(0,1fr);gap:12px;align-items:end}
+.in{width:100%;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:15px}
+textarea.in{min-height:76px;resize:vertical;font-family:var(--font-num);font-size:14px}
+.sessions{display:flex;flex-direction:column;gap:10px}
+.srow{border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}
+.srow .sname{grid-column:1/-1}
+.srow .days{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
+.day{position:relative}
+.day input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.day span{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 6px;border-radius:7px;border:1px solid var(--line);font-size:13px}
+.day input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.day input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.x{border:0;background:none;color:var(--muted);font-size:13px;padding:4px 6px}
+.x:hover{color:var(--burn)}
+/* holidays: import + click-to-pick calendar */
+.imp{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.imp-status{font-size:13px;color:var(--muted);margin:0}
+.imp-status.err{color:var(--burn)}
+.review{border:1px solid var(--accent);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;font-size:14px}
+.review ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto}
+.review label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.review .acts{display:flex;gap:8px;flex-wrap:wrap}
+.cal{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg)}
+.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.cal-title{font-family:var(--font-num);font-weight:600;font-size:15px}
+.cal-nav{display:flex;gap:6px}
+.cal-nav button{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:16px;line-height:1;padding:0}
+.cal-nav button:hover{border-color:var(--accent);color:var(--accent)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+.cal-wd{font-size:12px;color:var(--muted);padding:2px 0}
+.cal-d{height:36px;border:1px solid transparent;border-radius:8px;background:none;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:14px;padding:0}
+.cal-d:hover:not([disabled]){border-color:var(--accent)}
+.cal-d.off{color:var(--muted)}
+.cal-d.today{border-color:var(--muted)}
+.cal-d.hol{background:var(--accent);color:var(--surface);font-weight:600}
+.cal-d[disabled]{opacity:.3;cursor:not-allowed}
+.cal-legend{font-size:12px;color:var(--muted);margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;padding:3px 4px 3px 10px;border:1px solid var(--line);border-radius:999px;background:var(--bg)}
+.chip .go{border:0;background:none;padding:0;font-size:13px}
+.chip .go:hover{color:var(--accent)}
+.chip .rm{border:0;background:none;color:var(--muted);padding:0 6px;font-size:15px;line-height:1}
+.chip .rm:hover{color:var(--burn)}
+details.manual summary{cursor:pointer;font-size:13px;color:var(--accent)}
+details.manual textarea{margin:8px 0 4px}
+.preview{margin:0;padding:10px 12px;border-radius:8px;background:var(--bg);font-size:13.5px}
+.preview.err{background:var(--warn-bg);color:var(--burn)}
+.panel-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;position:sticky;bottom:calc(-24px - env(safe-area-inset-bottom,0px));background:var(--surface);padding-block:12px;border-top:1px solid var(--line)}
+
+/* weekly timetable */
+.week{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px clamp(16px,3vw,24px);display:flex;flex-direction:column;gap:14px}
+.week-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px}
+.wk-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.wk-nav .ico{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0;font-size:16px;line-height:1}
+.wk-nav .ico:hover{border-color:var(--accent);color:var(--accent)}
+.wk-range{font-family:var(--font-num);font-size:14px;font-weight:600;min-width:0}
+.btn.sm{padding:5px 10px;font-size:13px}
+.nextcard{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.nc-item{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0;background:var(--bg)}
+.nc-item.now{border-color:color-mix(in srgb,var(--burn) 45%,var(--line));background:var(--warn-bg)}
+.nc-tag{font-size:12px;font-weight:600;color:var(--accent);letter-spacing:.04em}
+.nc-item.now .nc-tag{color:var(--burn)}
+.nc-name{font-size:18px;font-weight:700;overflow-wrap:anywhere;line-height:1.3}
+.nc-meta{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.nc-empty{margin:0;color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.wk-note{margin:0;font-size:12.5px;color:var(--muted)}
+.wk-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.wk-day{display:flex;flex-direction:column;gap:6px;min-width:0}
+.wk-dh{display:flex;justify-content:space-between;align-items:baseline;gap:4px;padding:4px 7px;border-radius:7px;font-size:13px;background:var(--bg)}
+.wk-dh b{font-weight:600}
+.wk-dh span{font-family:var(--font-num);font-size:12px;color:var(--muted)}
+.wk-day.today .wk-dh{background:var(--accent);color:var(--surface)}
+.wk-day.today .wk-dh span{color:var(--surface)}
+.wk-items{display:flex;flex-direction:column;gap:6px;min-width:0}
+.wk-b{border:1px solid var(--line);border-radius:8px;padding:7px 8px;display:flex;flex-direction:column;gap:2px;min-width:0;background:var(--surface)}
+.wk-b .tm,.wk-b .pr{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted)}
+.wk-b .nm{font-size:13.5px;font-weight:600;overflow-wrap:anywhere;line-height:1.3}
+.wk-b.done{opacity:.5}
+.wk-b.now{border-color:var(--burn);background:var(--warn-bg)}
+.wk-b.now .pr{color:var(--burn)}
+.wk-b.next{border-color:var(--accent)}
+.wk-b .tag{align-self:flex-start;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--accent);color:var(--surface)}
+.wk-b.now .tag{background:var(--burn)}
+.wk-off{font-size:12.5px;color:var(--muted);padding:2px 7px}
+/* share code */
+.sharebox{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg);display:flex;flex-direction:column;gap:8px}
+.sharebox>span{font-size:13px;font-weight:600}
+.sharebox small{color:var(--muted);font-size:12px}
+.share-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.in.code{font-family:var(--font-num);font-size:13px;background:var(--surface)}
+
+@media (max-width:720px){
+  .wk-grid{grid-template-columns:1fr;gap:6px}
+  .wk-day{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:start;gap:8px}
+  .wk-dh{flex-direction:column;align-items:flex-start;gap:0}
+}
+@media (max-width:720px){
+  .totals{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .amount.right{text-align:left;align-items:flex-start}
+}
+@media (max-width:420px){
+  .stats3{grid-template-columns:1fr 1fr}
+  .stats3>div:first-child{grid-column:1/-1}
+  .row2{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  .ticker{transition:none}
+  .pill[data-k="class"] i{animation:none}
+}
+</style>
+<script>try{var tmTheme=localStorage.getItem('tuition-meter-theme');if(tmTheme==='dark'||tmTheme==='auto')document.documentElement.setAttribute('data-tm-theme',tmTheme)}catch(e){}</script>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow" data-i18n="title">学费计价器</div>
+      <h1 id="school-name">示例大学</h1>
+    </div>
+    <div class="actions">
+      <select class="lang" id="lang" data-i18n-aria="langAria" aria-label="语言">
+        <option value="0">简体中文</option>
+        <option value="1">繁體中文</option>
+        <option value="2">English</option>
+        <option value="3">日本語</option>
+        <option value="4">한국어</option>
+      </select>
+      <select class="lang" id="theme" data-i18n-aria="themeAria" aria-label="外观">
+        <option value="light" data-i18n="thLight">浅色</option>
+        <option value="dark" data-i18n="thDark">黑色</option>
+        <option value="auto" data-i18n="thAuto">跟随系统</option>
+      </select>
+      <div class="seg" role="group" data-i18n-aria="modeAria" aria-label="计费方式">
+        <button type="button" id="mode-class" aria-pressed="true" data-i18n="modeClass">按课表</button>
+        <button type="button" id="mode-day" aria-pressed="false" data-i18n="modeDay">全天在校</button>
+      </div>
+      <span class="pill" id="status-pill" data-k="break"><i></i><span id="status-text"></span></span>
+      <button class="btn" id="btn-demo" type="button"></button>
+      <button class="btn primary" id="btn-settings" type="button" data-i18n="settingsBtn">设置学费和课表</button>
+    </div>
+  </header>
+
+  <p class="note" id="example-note" hidden><span data-i18n="exNote">现在显示的是示例数据。</span> <button type="button" id="btn-settings-2" data-i18n="exNoteBtn">填入你自己的学费和课表</button><span data-i18n="exNoteOr">，也可以</span> <button type="button" id="btn-share-2" data-i18n="exNoteShare">粘贴同学的共享码</button></p>
+
+  <section class="meter" data-i18n-aria="meterAria" aria-label="实时计费">
+    <div class="meter-head">
+      <span class="label" id="mode-desc"></span>
+      <span class="class-name" id="class-name"></span>
+    </div>
+    <div class="meter-main">
+      <div class="amount">
+        <div class="label" id="meter-label"></div>
+        <div class="amount-num"><span class="cur" id="cur-big">¥</span><span id="big-num">0.00</span></div>
+      </div>
+      <div class="amount right">
+        <div class="label" id="side-label"></div>
+        <div class="amount-num"><span class="cur" id="cur-side"></span><span id="side-num">—</span></div>
+      </div>
+    </div>
+    <div class="stats3">
+      <div><span class="label" data-i18n="perSec">每秒成本</span><b id="rate-sec">—</b></div>
+      <div><span class="label" id="elapsed-label"></span><b id="elapsed">—</b></div>
+      <div><span class="label" id="left-label"></span><b id="left">—</b></div>
+    </div>
+    <div id="prog-wrap">
+      <div class="prog-top"><span class="label" id="prog-label"></span><b id="prog-pct">0%</b></div>
+      <div class="bar"><div class="fill" id="prog-fill"></div><div class="ticks" id="prog-ticks"></div></div>
+      <div class="prog-foot" id="prog-foot"></div>
+    </div>
+    <p class="ticker" id="ticker" aria-live="polite"></p>
+  </section>
+
+  <section class="totals">
+    <div class="tile burn"><span class="label" data-i18n="todayUsed">今天已消耗</span><b id="t-today">—</b></div>
+    <div class="tile"><span class="label" data-i18n="totalUsed">累计已消耗</span><b id="t-used">—</b><small class="sub" id="t-used-sub"></small><div class="mini"><span id="t-used-bar"></span></div></div>
+    <div class="tile"><span class="label" data-i18n="tuitionLeft">剩余学费</span><b id="t-left">—</b></div>
+    <div class="tile"><span class="label" data-i18n="totalPct">总进度</span><b id="t-pct">—</b><div class="mini"><span id="t-bar"></span></div></div>
+  </section>
+
+  <section class="week" aria-labelledby="wk-title">
+    <div class="week-head">
+      <h2 id="wk-title" data-i18n="wkTitle">课表</h2>
+      <div class="wk-nav">
+        <button type="button" class="ico" id="wk-prev" data-i18n-aria="wkPrev" aria-label="上一周">‹</button>
+        <span class="wk-range" id="wk-range"></span>
+        <button type="button" class="ico" id="wk-next" data-i18n-aria="wkNext" aria-label="下一周">›</button>
+        <button type="button" class="btn sm" id="wk-today" data-i18n="wkThis" hidden>回到本周</button>
+      </div>
+    </div>
+    <div class="nextcard" id="next-card" aria-live="polite"></div>
+    <p class="wk-note" id="wk-note" data-i18n="wkDayMode" hidden></p>
+    <div class="wk-grid" id="wk-grid"></div>
+  </section>
+
+  <section class="today">
+    <div class="today-head">
+      <h2 id="today-title"></h2>
+      <div class="rates">
+        <span><span data-i18n="perMin">每分钟</span> <b id="r-min">—</b></span>
+        <span><span data-i18n="perHour">每小时</span> <b id="r-hour">—</b></span>
+        <span><span id="r-day-label"></span> <b id="r-day">—</b></span>
+      </div>
+    </div>
+    <ul class="plist" id="today-list"></ul>
+  </section>
+
+  <footer class="foot">
+    <p id="method">—</p>
+    <button class="btn" id="btn-copy" type="button"></button>
+  </footer>
+</div>
+
+<div class="scrim" id="drawer" hidden>
+  <form class="panel" id="form" novalidate>
+    <div class="panel-head">
+      <h2 data-i18n="sTitle">学费和课表</h2>
+      <button type="button" class="btn" id="btn-close" data-i18n="close">关闭</button>
+    </div>
+    <p class="note" id="draft-note" hidden><span data-i18n="draftNote">已恢复上次没保存的修改，可以接着改。</span> <button type="button" id="btn-draft-discard" data-i18n="draftDiscard">放弃这些修改</button></p>
+    <div class="sharebox" id="f-share">
+      <span data-i18n="shTitle">共享码</span>
+      <small data-i18n="shHint"></small>
+      <div class="share-row">
+        <input class="in code" id="f-share-out" readonly data-i18n-aria="shMine" aria-label="我的共享码">
+        <button type="button" class="btn" id="btn-share-copy" data-i18n="shCopy" disabled>复制</button>
+      </div>
+      <div class="share-row">
+        <input class="in code" id="f-share-in" autocomplete="off" spellcheck="false" data-i18n-ph="shPaste" data-i18n-aria="shPaste">
+        <button type="button" class="btn" id="btn-share-import" data-i18n="shImport">导入</button>
+      </div>
+      <small data-i18n="shImportHint"></small>
+      <p class="imp-status" id="share-status" aria-live="polite" hidden></p>
+    </div>
+    <label class="field"><span data-i18n="fSchool">学校 / 学期名称</span><input class="in" id="f-school" maxlength="60"></label>
+    <div class="row3">
+      <label class="field"><span data-i18n="fCurrency">货币符号</span><input class="in" id="f-currency" maxlength="4"></label>
+      <label class="field"><span data-i18n="fTuition">这段时间的总学费</span><input class="in num" id="f-tuition" type="number" min="0" step="any" inputmode="decimal"></label>
+    </div>
+    <div class="row2">
+      <label class="field"><span data-i18n="fStart">开学日期</span><input class="in" id="f-start" type="date"></label>
+      <label class="field"><span data-i18n="fEnd">结课日期</span><input class="in" id="f-end" type="date"></label>
+    </div>
+    <div class="field">
+      <span data-i18n="fHol">放假 / 不上课的日子</span>
+      <small id="imp-hint"></small>
+      <div class="imp">
+        <button type="button" class="btn" id="btn-imp-img" data-i18n="impImg" hidden>上传校历图片，自动识别</button>
+        <button type="button" class="btn" id="btn-imp-ics" data-i18n="impIcs">导入 .ics 日历文件</button>
+        <button type="button" class="btn" id="btn-imp-stop" data-i18n="impStop" hidden>停止识别</button>
+        <input type="file" id="f-imp-img" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+        <input type="file" id="f-imp-ics" accept=".ics,text/calendar" hidden>
+      </div>
+      <p class="imp-status" id="imp-status" aria-live="polite" hidden></p>
+      <div class="review" id="imp-review" hidden>
+        <b id="imp-review-title"></b>
+        <ul id="imp-list"></ul>
+        <label id="imp-term-row" hidden><input type="checkbox" id="imp-term"><span id="imp-term-text"></span></label>
+        <div class="acts">
+          <button type="button" class="btn primary" id="btn-imp-apply" data-i18n="impApply">把勾选的加入放假日期</button>
+          <button type="button" class="btn" id="btn-imp-cancel" data-i18n="impCancel">不用了</button>
+        </div>
+      </div>
+      <div class="cal">
+        <div class="cal-head">
+          <span class="cal-title" id="cal-title"></span>
+          <div class="cal-nav">
+            <button type="button" id="cal-prev" data-i18n-aria="prevMonth" aria-label="上个月">‹</button>
+            <button type="button" id="cal-next" data-i18n-aria="nextMonth" aria-label="下个月">›</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="cal-legend" data-i18n="calLegend"></div>
+      </div>
+      <div class="chips" id="hol-chips"></div>
+      <details class="manual">
+        <summary data-i18n="manual">手动输入日期</summary>
+        <textarea class="in" id="f-holidays" placeholder="2026-10-01~2026-10-07&#10;2027-01-01" data-i18n-aria="manual" aria-label="手动输入日期"></textarea>
+        <small data-i18n="manualHint"></small>
+      </details>
+    </div>
+    <div class="field">
+      <span data-i18n="modeAria">计费方式</span>
+      <div class="seg" role="group" data-i18n-aria="modeAria" aria-label="计费方式">
+        <button type="button" id="f-mode-class" aria-pressed="true" data-i18n="fModeClass">按课表：只算上课时间</button>
+        <button type="button" id="f-mode-day" aria-pressed="false" data-i18n="fModeDay">全天：在校每一秒都算</button>
+      </div>
+      <small data-i18n="fModeHint"></small>
+    </div>
+    <div class="field" id="f-class-box">
+      <span data-i18n="fSessions">每周课表</span>
+      <small id="f-sessions-hint"></small>
+      <div class="imp">
+        <button type="button" class="btn" id="btn-tt-img" data-i18n="ttImg" hidden>上传课表图片，自动识别</button>
+        <button type="button" class="btn" id="btn-tt-ics" data-i18n="ttIcs">导入 .ics 课表文件</button>
+        <button type="button" class="btn" id="btn-tt-stop" data-i18n="impStop" hidden>停止识别</button>
+        <input type="file" id="f-tt-img" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+        <input type="file" id="f-tt-ics" accept=".ics,text/calendar" hidden>
+      </div>
+      <p class="imp-status" id="tt-status" aria-live="polite" hidden></p>
+      <div class="review" id="tt-review" hidden>
+        <b id="tt-review-title"></b>
+        <ul id="tt-list"></ul>
+        <small data-i18n="ttWeeksHint"></small>
+        <div class="acts">
+          <button type="button" class="btn primary" id="btn-tt-replace" data-i18n="ttReplace">用勾选的替换现有课表</button>
+          <button type="button" class="btn" id="btn-tt-append" data-i18n="ttAppend">追加到现有课表</button>
+          <button type="button" class="btn" id="btn-tt-cancel" data-i18n="impCancel">不用了</button>
+        </div>
+      </div>
+      <div class="sessions" id="f-sessions"></div>
+      <div><button type="button" class="btn" id="btn-add" data-i18n="addSession">添加一段上课时间</button></div>
+    </div>
+    <div class="field" id="f-day-box" hidden>
+      <span data-i18n="fDay">每天在校时间</span>
+      <small data-i18n="fDayHint"></small>
+      <div class="srow dayrow">
+        <input class="in" type="time" id="f-day-start" data-i18n-aria="arriveAria" aria-label="到校时间">
+        <span class="label" data-i18n="to">到</span>
+        <input class="in" type="time" id="f-day-end" data-i18n-aria="leaveAria" aria-label="离校时间">
+        <div class="days" id="f-day-days"></div>
+      </div>
+    </div>
+    <div class="row3">
+      <label class="field"><span data-i18n="fItemPrice">换算单价</span><input class="in num" id="f-item-price" type="number" min="0" step="any" inputmode="decimal"></label>
+      <label class="field"><span data-i18n="fItem">换算成什么</span><input class="in" id="f-item" maxlength="20" data-i18n-ph="exItem"></label>
+    </div>
+    <p class="preview" id="f-preview"></p>
+    <div class="panel-foot">
+      <button type="button" class="btn" id="btn-reset" data-i18n="reset">恢复示例</button>
+      <button type="button" class="btn primary" id="btn-save" data-i18n="save">保存并开始计费</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+/* ================= languages =================
+   Every string is [简体中文, 繁體中文, English, 日本語, 한국어]. {x} marks a value filled in at run time. */
+const LANGS=['zh-CN','zh-TW','en','ja','ko'];
+const LOCALES=['zh-CN','zh-TW','en-US','ja-JP','ko-KR'];
+const LANG_NAMES=['Simplified Chinese','Traditional Chinese','English','Japanese','Korean'];
+const I18N={
+title:['学费计价器','學費計價器','Tuition Meter','学費メーター','등록금 미터기'],
+themeAria:['外观','外觀','Appearance','外観','화면 모드'],
+thLight:['浅色','淺色','Light','ライト','라이트'],
+thDark:['黑色','黑色','Dark','ダーク','다크'],
+thAuto:['跟随系统','跟隨系統','Match system','システムに合わせる','시스템 설정 따르기'],
+langAria:['语言','語言','Language','言語','언어'],
+modeAria:['计费方式','計費方式','Billing mode','課金方式','과금 방식'],
+modeClass:['按课表','按課表','Classes only','授業のみ','수업만'],
+modeDay:['全天在校','全天在校','All day','終日','종일'],
+settingsBtn:['设置学费和课表','設定學費和課表','Set tuition & schedule','学費と時間割を設定','등록금·시간표 설정'],
+exNote:['现在显示的是示例数据。','現在顯示的是範例資料。','This is example data.','いま表示しているのはサンプルデータです。','지금 보이는 것은 예시 데이터입니다.'],
+exNoteBtn:['填入你自己的学费和课表','填入你自己的學費和課表','Enter your own tuition and schedule','自分の学費と時間割を入力する','내 등록금과 시간표 입력하기'],
+meterAria:['实时计费','即時計費','Live meter','リアルタイム課金','실시간 요금'],
+perSec:['每秒成本','每秒成本','Cost per second','1秒あたり','초당 비용'],
+todayUsed:['今天已消耗','今天已消耗','Spent today','今日の消費','오늘 쓴 금액'],
+totalUsed:['累计已消耗','累計已消耗','Spent so far','累計消費','누적 사용액'],
+tuitionLeft:['剩余学费','剩餘學費','Tuition left','残りの学費','남은 등록금'],
+totalPct:['总进度','總進度','Overall progress','全体の進捗','전체 진행률'],
+ofTotal:['共 {a} · {p}%','共 {a} · {p}%','of {a} · {p}%','総額 {a} · {p}%','총 {a} · {p}%'],
+perMin:['每分钟','每分鐘','Per minute','1分あたり','분당'],
+perHour:['每小时','每小時','Per hour','1時間あたり','시간당'],
+
+/* wording that differs between the two billing modes: c_ = classes only, d_ = all day */
+c_desc:['按课表计费：只有上课时间花钱','按課表計費：只有上課時間花錢','Classes only: you pay only while in class','授業のみ：授業中だけ課金','수업만: 수업 시간에만 과금'],
+c_used:['本节课已消耗','本節課已消耗','Spent this class','この授業で消費','이번 수업에 쓴 금액'],
+c_left:['本节还剩','本節還剩','Left this class','この授業の残り','이번 수업 남은 금액'],
+c_elapsed:['已上课','已上課','In class for','経過時間','수업 경과'],
+c_remain:['剩余时长','剩餘時長','Time left','残り時間','남은 시간'],
+c_prog:['本节进度','本節進度','Class progress','授業の進捗','수업 진행률'],
+c_on:['上课中','上課中','In class','授業中','수업 중'],
+c_off:['不在上课','不在上課','Not in class','授業外','수업 없음'],
+c_nextVal:['下节课价值','下節課價值','Next class is worth','次の授業の値段','다음 수업의 값'],
+c_until:['距离上课','距離上課','Class starts in','授業開始まで','수업 시작까지'],
+c_nextDur:['下节时长','下節時長','Class length','授業の長さ','수업 길이'],
+c_list:['课表价目','課表價目','Class price list','授業の値段表','수업 가격표'],
+c_demo:['演示上课','示範上課','Demo a class','授業中をデモ','수업 중 미리보기'],
+c_demoOn:['演示：上课中','示範：上課中','Demo: in class','デモ：授業中','미리보기: 수업 중'],
+c_rday:['平均每个上课日','平均每個上課日','Avg. per class day','授業日1日あたり','수업일 하루 평균'],
+c_item:['上课','上課','Class','授業','수업'],
+c_copy:['复制这节课的账单','複製這節課的帳單',"Copy this class's bill",'この授業の請求をコピー','이번 수업 청구서 복사'],
+d_desc:['全天计费：在校的每一秒都花钱','全天計費：在校的每一秒都花錢','All day: every second at school costs money','終日：学校にいる間ずっと課金','종일: 학교에 있는 매 초마다 과금'],
+d_used:['今天在校已消耗','今天在校已消耗','Spent at school today','今日の在校で消費','오늘 학교에서 쓴 금액'],
+d_left:['今天还剩','今天還剩','Left for today','今日の残り','오늘 남은 금액'],
+d_elapsed:['已在校','已在校','At school for','在校時間','학교에 있은 시간'],
+d_remain:['离放学还有','離放學還有','Until school ends','下校まで','하교까지'],
+d_prog:['今日进度','今日進度',"Today's progress",'今日の進捗','오늘 진행률'],
+d_on:['在校中','在校中','At school','在校中','등교 중'],
+d_off:['不在学校','不在學校','Not at school','学校外','학교 밖'],
+d_nextVal:['下个在校日价值','下個在校日價值','Next school day is worth','次の登校日の値段','다음 등교일의 값'],
+d_until:['距离到校','距離到校','School starts in','登校まで','등교까지'],
+d_nextDur:['在校时长','在校時長','School day length','在校時間の長さ','등교 시간 길이'],
+d_list:['在校价目','在校價目','School day price','在校の値段表','등교 가격표'],
+d_demo:['演示在校','示範在校','Demo a school day','在校中をデモ','등교 중 미리보기'],
+d_demoOn:['演示：在校中','示範：在校中','Demo: at school','デモ：在校中','미리보기: 등교 중'],
+d_rday:['每个在校日','每個在校日','Per school day','登校日1日あたり','등교일 하루'],
+d_item:['在校','在校','At school','在校','등교'],
+d_copy:['复制今天的账单','複製今天的帳單',"Copy today's bill",'今日の請求をコピー','오늘 청구서 복사'],
+
+backNow:['回到现在','回到現在','Back to now','現在に戻る','현재로 돌아가기'],
+stBefore:['学期未开始','學期未開始','Term not started','学期開始前','학기 시작 전'],
+stAfter:['学期已结束','學期已結束','Term ended','学期終了','학기 종료'],
+allUsed:['已全部消耗','已全部消耗','All spent','すべて消費済み','전액 사용'],
+totalClassHours:['总课时','總課時','Total class time','総授業時間','총 수업 시간'],
+totalDayHours:['总在校时间','總在校時間','Total time at school','総在校時間','총 등교 시간'],
+hours:['{n} 小时','{n} 小時','{n} h','{n} 時間','{n}시간'],
+tickEvery:['每一格 = {n} 分钟','每一格 = {n} 分鐘','Each block = {n} min','1マス = {n} 分','한 칸 = {n}분'],
+dayPrefix:['{d} 天 ','{d} 天 ','{d}d ','{d}日 ','{d}일 '],
+today:['今天','今天','Today','今日','오늘'],
+tomorrow:['明天','明天','Tomorrow','明日','내일'],
+dayAfter:['后天','後天','In 2 days','明後日','모레'],
+
+/* rotating lines */
+tk1:['刚刚过去的 1 分钟，值 {a}。','剛剛過去的 1 分鐘，值 {a}。','The minute that just passed cost {a}.','いま過ぎた1分は {a}。','방금 지나간 1분은 {a}.'],
+tk2:['发呆 5 分钟，大约花掉 {a}。','發呆 5 分鐘，大約花掉 {a}。','Zoning out for 5 minutes costs about {a}.','5分ぼーっとすると約 {a}。','5분 멍하니 있으면 약 {a}.'],
+tk3:['刷手机 10 分钟 = {a}，想清楚再刷。','滑手機 10 分鐘 = {a}，想清楚再滑。','10 minutes on your phone = {a}. Think twice.','スマホ10分 = {a}。よく考えて。','휴대폰 10분 = {a}. 잘 생각해 보세요.'],
+tk4:['每秒 {a}，钱在走，课也在走。','每秒 {a}，錢在走，課也在走。','{a} every second. The money runs while the class does.','毎秒 {a}。授業と一緒にお金も進む。','초당 {a}. 수업과 함께 돈도 흘러갑니다.'],
+tk5:['今天到现在一共花了 {a}。','今天到現在一共花了 {a}。','You have spent {a} so far today.','今日ここまでの合計は {a}。','오늘 지금까지 {a} 썼습니다.'],
+tk6:['这节课总价 {a}，够买 {n} 杯{item}。','這節課總價 {a}，夠買 {n} 杯{item}。','This class costs {a} in total: {n} × {item}.','この授業は合計 {a}。{item} {n} 杯分。','이번 수업은 총 {a}. {item} {n}잔 값입니다.'],
+td1:['在学校的每一分钟，值 {a}。','在學校的每一分鐘，值 {a}。','Every minute at school costs {a}.','学校での1分は {a}。','학교에서의 1분은 {a}.'],
+td2:['从进校门到现在，今天已经花了 {a}。','從進校門到現在，今天已經花了 {a}。','Since you arrived today, you have spent {a}.','登校してから今日はもう {a}。','등교한 뒤 오늘 벌써 {a} 썼습니다.'],
+td3:['课间 10 分钟也要 {a}。','下課 10 分鐘也要 {a}。','Even a 10-minute break costs {a}.','10分の休み時間も {a}。','쉬는 시간 10분도 {a}.'],
+td4:['每秒 {a}，上课、课间、午休都在算。','每秒 {a}，上課、下課、午休都在算。','{a} every second: class, breaks and lunch all count.','毎秒 {a}。授業も休み時間も昼休みも課金中。','초당 {a}. 수업, 쉬는 시간, 점심시간 모두 포함됩니다.'],
+td5:['午休 1 小时 = {a}，睡得值不值？','午休 1 小時 = {a}，睡得值不值？','A 1-hour lunch break = {a}. Worth the nap?','昼休み1時間 = {a}。昼寝の価値はある？','점심시간 1시간 = {a}. 낮잠 잘 만한가요?'],
+td6:['今天在校一整天总价 {a}，够买 {n} 杯{item}。','今天在校一整天總價 {a}，夠買 {n} 杯{item}。','A full day at school costs {a}: {n} × {item}.','今日の在校は合計 {a}。{item} {n} 杯分。','오늘 하루 등교는 총 {a}. {item} {n}잔 값입니다.'],
+tb1:['学期还没开始，学费暂时不走。','學期還沒開始，學費暫時不走。','The term has not started, so the meter is paused.','学期はまだ始まっていません。課金は停止中。','학기가 아직 시작되지 않아 요금이 멈춰 있습니다.'],
+tb2:['开学后每秒 {a}，做好心理准备。','開學後每秒 {a}，做好心理準備。','Once it starts: {a} per second. Brace yourself.','始まったら毎秒 {a}。心の準備を。','개강하면 초당 {a}. 마음의 준비를 하세요.'],
+ta1:['这段学费已经全部花完了。','這段學費已經全部花完了。','All of this tuition has been spent.','この期間の学費はすべて使い切りました。','이 기간의 등록금을 모두 썼습니다.'],
+ta2c:['一共上了 {h} 小时课，每小时 {a}。','一共上了 {h} 小時課，每小時 {a}。','{h} hours of class in total, at {a} per hour.','授業は合計 {h} 時間、1時間あたり {a}。','수업은 총 {h}시간, 시간당 {a}.'],
+ta2d:['一共在校 {h} 小时，每小时 {a}。','一共在校 {h} 小時，每小時 {a}。','{h} hours at school in total, at {a} per hour.','在校は合計 {h} 時間、1時間あたり {a}。','등교는 총 {h}시간, 시간당 {a}.'],
+tbc1:['现在不在上课，学费暂停计费。','現在不在上課，學費暫停計費。','No class right now, so the meter is paused.','いまは授業外。課金は停止中。','지금은 수업이 없어 요금이 멈춰 있습니다.'],
+tbc2:['下节课价值 {a}，迟到 10 分钟就是 {b}。','下節課價值 {a}，遲到 10 分鐘就是 {b}。','Your next class is worth {a}. Being 10 minutes late wastes {b}.','次の授業は {a}。10分遅刻すると {b} の損。','다음 수업은 {a}. 10분 지각하면 {b} 손해입니다.'],
+tbc3:['还有 {a} 的课没上，别浪费。','還有 {a} 的課沒上，別浪費。',"{a} of classes still ahead. Don't waste them.",'まだ {a} 相当の授業が残っています。無駄にしないで。','아직 {a}어치 수업이 남았습니다. 낭비하지 마세요.'],
+tbc4:['下节课相当于 {n} 杯{item}。','下節課相當於 {n} 杯{item}。','Your next class equals {n} × {item}.','次の授業は {item} {n} 杯分。','다음 수업은 {item} {n}잔 값입니다.'],
+tbd1:['现在不在学校，学费暂停计费。','現在不在學校，學費暫停計費。','You are not at school, so the meter is paused.','いまは学校外。課金は停止中。','지금은 학교 밖이라 요금이 멈춰 있습니다.'],
+tbd2:['下个在校日价值 {a}，迟到 10 分钟就是 {b}。','下個在校日價值 {a}，遲到 10 分鐘就是 {b}。','Your next school day is worth {a}. Being 10 minutes late wastes {b}.','次の登校日は {a}。10分遅刻すると {b} の損。','다음 등교일은 {a}. 10분 지각하면 {b} 손해입니다.'],
+tbd3:['还有 {a} 的在校时间没用，别浪费。','還有 {a} 的在校時間沒用，別浪費。',"{a} of school time still ahead. Don't waste it.",'まだ {a} 相当の在校時間が残っています。無駄にしないで。','아직 {a}어치 등교 시간이 남았습니다. 낭비하지 마세요.'],
+tbd4:['在校一天相当于 {n} 杯{item}。','在校一天相當於 {n} 杯{item}。','One school day equals {n} × {item}.','在校1日は {item} {n} 杯分。','등교 하루는 {item} {n}잔 값입니다.'],
+
+/* today's price list */
+noClassNext:['今天没有课，学费不走。下一节在 {w}。','今天沒有課，學費不走。下一節在 {w}。','No classes today, so nothing is charged. Next class: {w}.','今日は授業なし。課金もなし。次の授業は {w}。','오늘은 수업이 없어 요금도 없습니다. 다음 수업: {w}.'],
+noClass:['今天没有课。','今天沒有課。','No classes today.','今日は授業なし。','오늘은 수업이 없습니다.'],
+noSchoolNext:['今天不用去学校，学费不走。下个在校日是 {w}。','今天不用去學校，學費不走。下個在校日是 {w}。','No school today, so nothing is charged. Next school day: {w}.','今日は登校なし。課金もなし。次の登校日は {w}。','오늘은 등교일이 아니라 요금도 없습니다. 다음 등교일: {w}.'],
+noSchool:['今天不用去学校。','今天不用去學校。','No school today.','今日は登校なし。','오늘은 등교일이 아닙니다.'],
+lDone:['已结束 · 花掉 {a}','已結束 · 花掉 {a}','Finished · cost {a}','終了 · {a} 消費','종료 · {a} 사용'],
+lNow:['进行中 · 已花 {a}（{p}%）','進行中 · 已花 {a}（{p}%）','In progress · {a} spent ({p}%)','進行中 · {a} 消費（{p}%）','진행 중 · {a} 사용 ({p}%)'],
+lNext:['未开始 · 每分钟 {a}','未開始 · 每分鐘 {a}','Not started · {a} per minute','開始前 · 1分あたり {a}','시작 전 · 분당 {a}'],
+
+mClass:['计算方式：总学费 {t} ÷ {d} 个上课日里共 {h} 小时的课 = 每秒 {r}。放假、没课的日子和课间不计费。',
+  '計算方式：總學費 {t} ÷ {d} 個上課日裡共 {h} 小時的課 = 每秒 {r}。放假、沒課的日子和下課時間不計費。',
+  'How it works: total tuition {t} ÷ {h} hours of class over {d} class days = {r} per second. Holidays, days without class and breaks between classes are free.',
+  '計算方法：学費合計 {t} ÷ 授業日 {d} 日・授業 {h} 時間 = 毎秒 {r}。休日、授業のない日、休み時間は課金されません。',
+  '계산 방식: 총 등록금 {t} ÷ 수업일 {d}일 동안의 수업 {h}시간 = 초당 {r}. 휴일, 수업 없는 날, 쉬는 시간은 과금되지 않습니다.'],
+mDay:['计算方式：总学费 {t} ÷ {d} 个在校日里共 {h} 小时的在校时间 = 每秒 {r}。放假和不去学校的日子不计费，课间和午休照算。',
+  '計算方式：總學費 {t} ÷ {d} 個在校日裡共 {h} 小時的在校時間 = 每秒 {r}。放假和不去學校的日子不計費，下課和午休照算。',
+  'How it works: total tuition {t} ÷ {h} hours at school over {d} school days = {r} per second. Holidays and days off are free; breaks and lunch still count.',
+  '計算方法：学費合計 {t} ÷ 登校日 {d} 日・在校 {h} 時間 = 毎秒 {r}。休日と登校しない日は課金されません。休み時間と昼休みは課金されます。',
+  '계산 방식: 총 등록금 {t} ÷ 등교일 {d}일 동안의 등교 {h}시간 = 초당 {r}. 휴일과 등교하지 않는 날은 과금되지 않고, 쉬는 시간과 점심시간은 포함됩니다.'],
+mLocal:[' 数据只存在你自己的浏览器里。',' 資料只存在你自己的瀏覽器裡。',' Your data stays in your own browser.',' データはあなたのブラウザにだけ保存されます。',' 데이터는 내 브라우저에만 저장됩니다.'],
+
+/* settings */
+sTitle:['学费和课表','學費和課表','Tuition & schedule','学費と時間割','등록금과 시간표'],
+close:['关闭','關閉','Close','閉じる','닫기'],
+fSchool:['学校 / 学期名称','學校 / 學期名稱','School / term name','学校・学期名','학교 / 학기 이름'],
+fCurrency:['货币符号','貨幣符號','Currency','通貨記号','통화 기호'],
+fTuition:['这段时间的总学费','這段時間的總學費','Total tuition for this period','この期間の学費合計','이 기간의 총 등록금'],
+fStart:['开学日期','開學日期','First day','開始日','개강일'],
+fEnd:['结课日期','結課日期','Last day','終了日','종강일'],
+fHol:['放假 / 不上课的日子','放假 / 不上課的日子','Holidays / days off','休み・授業のない日','휴일 / 수업 없는 날'],
+holHint:['这些天不计费。直接在日历上点选，或导入 .ics 日历文件。','這些天不計費。直接在行事曆上點選，或匯入 .ics 檔。','These days are not charged. Pick them on the calendar or import an .ics file.','これらの日は課金されません。カレンダーで選ぶか、.ics ファイルを読み込みます。','이 날들은 과금되지 않습니다. 달력에서 고르거나 .ics 파일을 가져오세요.'],
+holHintAI:['这些天不计费。可以上传校历图片自动识别（PDF 请先截图），也可以导入 .ics 文件，或直接在日历上点选。','這些天不計費。可以上傳校曆圖片自動辨識（PDF 請先截圖），也可以匯入 .ics 檔，或直接在行事曆上點選。','These days are not charged. Upload a picture of your school calendar (screenshot a PDF first), import an .ics file, or pick days on the calendar.','これらの日は課金されません。学年暦の画像をアップロード（PDF は先にスクリーンショット）、.ics の読み込み、カレンダーでの選択ができます。','이 날들은 과금되지 않습니다. 학사일정 이미지를 올리거나(PDF는 먼저 캡처), .ics 파일을 가져오거나, 달력에서 직접 고르세요.'],
+impImg:['上传校历图片，自动识别','上傳校曆圖片，自動辨識','Upload a calendar image','学年暦の画像を読み取る','학사일정 이미지 인식'],
+impIcs:['导入 .ics 日历文件','匯入 .ics 行事曆檔','Import .ics file','.ics ファイルを読み込む','.ics 파일 가져오기'],
+impStop:['停止识别','停止辨識','Stop','中止','중지'],
+impApply:['把勾选的加入放假日期','把勾選的加入放假日期','Add ticked items as days off','チェックした日を休みに追加','선택 항목을 휴일로 추가'],
+impCancel:['不用了','不用了','Dismiss','やめる','취소'],
+prevMonth:['上个月','上個月','Previous month','前の月','이전 달'],
+nextMonth:['下个月','下個月','Next month','次の月','다음 달'],
+calLegend:['点一下标记为放假，再点一下取消。按住 Shift 点另一天，可以把中间一整段都选上。灰色数字是本来就没课的日子。','點一下標記為放假，再點一下取消。按住 Shift 點另一天，可以把中間一整段都選上。灰色數字是本來就沒課的日子。','Click a day to mark it off; click again to undo. Shift-click another day to select the whole range. Grey numbers are days with no classes anyway.','クリックで休みにし、もう一度クリックで解除。Shift を押しながら別の日をクリックすると、その間をまとめて選べます。灰色の数字はもともと授業のない日です。','한 번 누르면 휴일로 표시되고, 다시 누르면 해제됩니다. Shift를 누른 채 다른 날을 누르면 그 사이가 모두 선택됩니다. 회색 숫자는 원래 수업이 없는 날입니다.'],
+manual:['手动输入日期','手動輸入日期','Type dates by hand','日付を手入力','날짜 직접 입력'],
+manualHint:['每行一个日期，或用 ~ 连起来的一段日期。','每行一個日期，或用 ~ 連起來的一段日期。','One date per line, or a range joined with ~.','1行に1つの日付、または ~ でつないだ期間。','한 줄에 날짜 하나, 또는 ~ 로 이은 기간.'],
+fModeClass:['按课表：只算上课时间','按課表：只算上課時間','Classes only: bill class time','授業のみ：授業時間だけ','수업만: 수업 시간만'],
+fModeDay:['全天：在校每一秒都算','全天：在校每一秒都算','All day: bill every second at school','終日：在校中ずっと','종일: 등교 시간 전체'],
+fModeHint:['两种方式的设置都会保存，主页右上角可以随时切换。','兩種方式的設定都會保存，主頁右上角可以隨時切換。','Both setups are saved. Switch any time at the top of the main page.','どちらの設定も保存されます。メイン画面の上部でいつでも切り替えられます。','두 방식의 설정이 모두 저장됩니다. 메인 화면 위쪽에서 언제든 바꿀 수 있습니다.'],
+fSessions:['每周课表','每週課表','Weekly timetable','週間時間割','주간 시간표'],
+fSessionsHint:['每一行是一段上课时间，勾选它在星期几上。只有上课时间才计费。','每一行是一段上課時間，勾選它在星期幾上。只有上課時間才計費。','Each row is one block of class time. Tick the weekdays it runs on. Only class time is billed.','1行が1つの授業時間帯です。行われる曜日にチェックを入れます。課金されるのは授業時間だけです。','한 줄이 수업 시간 한 구간입니다. 해당 요일을 선택하세요. 수업 시간에만 과금됩니다.'],
+addSession:['添加一段上课时间','新增一段上課時間','Add a class block','授業時間帯を追加','수업 구간 추가'],
+fDay:['每天在校时间','每天在校時間','Hours at school each day','毎日の在校時間','매일 등교 시간'],
+fDayHint:['从到校到离校的每一秒都计费，课间和午休也算。勾选哪几天要去学校。','從到校到離校的每一秒都計費，下課和午休也算。勾選哪幾天要去學校。','Every second from arrival to leaving is billed, including breaks and lunch. Tick the days you go to school.','登校から下校まで毎秒課金されます。休み時間と昼休みも含みます。登校する曜日にチェックを入れます。','등교부터 하교까지 매 초 과금되며 쉬는 시간과 점심시간도 포함됩니다. 등교하는 요일을 선택하세요.'],
+arriveAria:['到校时间','到校時間','Arrival time','登校時刻','등교 시각'],
+leaveAria:['离校时间','離校時間','Leaving time','下校時刻','하교 시각'],
+to:['到','到','to','〜','~'],
+fItemPrice:['换算单价','換算單價','Unit price','換算単価','환산 단가'],
+fItem:['换算成什么','換算成什麼','Convert into','何に換算する？','무엇으로 환산'],
+reset:['恢复示例','恢復範例','Restore example','サンプルに戻す','예시로 되돌리기'],
+save:['保存并开始计费','儲存並開始計費','Save and start','保存して開始','저장하고 시작'],
+sNamePh:['名称（可选），例如：高数','名稱（可選），例如：微積分','Name (optional), e.g. Calculus','名前（任意）例：微積分','이름(선택), 예: 미적분'],
+startAria:['开始时间','開始時間','Start time','開始時刻','시작 시각'],
+endAria:['结束时间','結束時間','End time','終了時刻','종료 시각'],
+delSession:['删除这段','刪除這段','Remove','削除','삭제'],
+pvClass:['{d} 个上课日，共 {h} 小时课。','{d} 個上課日，共 {h} 小時課。','{d} class days, {h} hours of class. ','授業日 {d} 日、授業 {h} 時間。','수업일 {d}일, 수업 {h}시간. '],
+pvDay:['{d} 个在校日，共 {h} 小时在校时间。','{d} 個在校日，共 {h} 小時在校時間。','{d} school days, {h} hours at school. ','登校日 {d} 日、在校 {h} 時間。','등교일 {d}일, 등교 {h}시간. '],
+pvRates:['每秒 {s}，每分钟 {m}，每小时 {hr}。','每秒 {s}，每分鐘 {m}，每小時 {hr}。','{s} per second, {m} per minute, {hr} per hour.','毎秒 {s}、毎分 {m}、毎時 {hr}。','초당 {s}, 분당 {m}, 시간당 {hr}.'],
+pvBad:[' 有 {n} 行放假日期没看懂，已忽略。',' 有 {n} 行放假日期看不懂，已忽略。',' {n} holiday line(s) could not be read and were ignored.',' 休みの日付のうち {n} 行は読み取れず、無視しました。',' 휴일 날짜 {n}줄은 읽을 수 없어 무시했습니다.'],
+
+/* validation */
+eTuition:['请填写大于 0 的总学费。','請填寫大於 0 的總學費。','Enter a total tuition greater than 0.','0 より大きい学費合計を入力してください。','0보다 큰 총 등록금을 입력하세요.'],
+eDates:['请填写开学和结课日期。','請填寫開學和結課日期。','Enter the first and last day.','開始日と終了日を入力してください。','개강일과 종강일을 입력하세요.'],
+eOrder:['结课日期要晚于开学日期。','結課日期要晚於開學日期。','The last day must be after the first day.','終了日は開始日より後にしてください。','종강일은 개강일보다 뒤여야 합니다.'],
+eSpan:['时间跨度太长，最多支持约 11 年。','時間跨度太長，最多支援約 11 年。','That span is too long. The limit is about 11 years.','期間が長すぎます。上限は約 11 年です。','기간이 너무 깁니다. 최대 약 11년까지 가능합니다.'],
+eNoSessDay:['请填写到校和离校时间（离校要晚于到校），并勾选星期几。','請填寫到校和離校時間（離校要晚於到校），並勾選星期幾。','Enter arrival and leaving times (leaving after arrival) and tick at least one weekday.','登校と下校の時刻（下校は登校より後）を入力し、曜日を選んでください。','등교·하교 시각(하교가 등교보다 뒤)을 입력하고 요일을 선택하세요.'],
+eNoSessClass:['至少要有一段有效的上课时间：结束晚于开始，并勾选星期几。','至少要有一段有效的上課時間：結束晚於開始，並勾選星期幾。','Add at least one valid class block: it must end after it starts and have a weekday ticked.','有効な授業時間帯が少なくとも1つ必要です。終了を開始より後にし、曜日を選んでください。','유효한 수업 구간이 하나 이상 필요합니다. 종료가 시작보다 뒤여야 하고 요일을 선택해야 합니다.'],
+eNoTime:['这段日期里没有任何计费时间，检查一下星期和放假日期。','這段日期裡沒有任何計費時間，檢查一下星期和放假日期。','There is no billable time in these dates. Check the weekdays and holidays.','この期間に課金される時間がありません。曜日と休みの日付を確認してください。','이 기간에 과금되는 시간이 없습니다. 요일과 휴일을 확인하세요.'],
+
+/* toasts and the copied bill */
+saved:['已保存，开始计费','已儲存，開始計費','Saved. The meter is running.','保存しました。課金を開始します。','저장했습니다. 요금 계산을 시작합니다.'],
+copied:['已复制，可以粘贴分享了','已複製，可以貼上分享了','Copied. Paste it anywhere to share.','コピーしました。貼り付けて共有できます。','복사했습니다. 붙여넣어 공유하세요.'],
+copyFail:['复制失败：','複製失敗：','Could not copy: ','コピーできませんでした：','복사하지 못했습니다: '],
+cpClass:['这节课我已经花了 {a}，还剩 {b}。每秒 {s}，一分钟 {m}。','這節課我已經花了 {a}，還剩 {b}。每秒 {s}，一分鐘 {m}。','This class has cost me {a} so far, with {b} to go. That is {s} per second, {m} per minute.','この授業でもう {a} 使いました。残りは {b}。毎秒 {s}、1分で {m}。','이번 수업에 벌써 {a} 썼고, {b} 남았습니다. 초당 {s}, 분당 {m}.'],
+cpDay:['今天在学校我已经花了 {a}，到放学还要再花 {b}。每秒 {s}，一分钟 {m}。','今天在學校我已經花了 {a}，到放學還要再花 {b}。每秒 {s}，一分鐘 {m}。','School has cost me {a} so far today, with {b} more before I leave. That is {s} per second, {m} per minute.','今日は学校でもう {a} 使いました。下校までにあと {b}。毎秒 {s}、1分で {m}。','오늘 학교에서 벌써 {a} 썼고, 하교까지 {b} 더 씁니다. 초당 {s}, 분당 {m}.'],
+cpNextC:['我的下节课价值 {a}，每分钟 {m}。学费已经花掉 {u}。','我的下節課價值 {a}，每分鐘 {m}。學費已經花掉 {u}。','My next class is worth {a}, at {m} per minute. I have spent {u} of my tuition so far.','次の授業は {a}、1分あたり {m}。学費はもう {u} 使いました。','다음 수업은 {a}, 분당 {m}. 등록금은 벌써 {u} 썼습니다.'],
+cpNextD:['我的下个在校日价值 {a}，每分钟 {m}。学费已经花掉 {u}。','我的下個在校日價值 {a}，每分鐘 {m}。學費已經花掉 {u}。','My next school day is worth {a}, at {m} per minute. I have spent {u} of my tuition so far.','次の登校日は {a}、1分あたり {m}。学費はもう {u} 使いました。','다음 등교일은 {a}, 분당 {m}. 등록금은 벌써 {u} 썼습니다.'],
+cpDoneC:['这段学费 {t} 已经全部花完，一小时课 {hr}。','這段學費 {t} 已經全部花完，一小時課 {hr}。','All {t} of this tuition is spent. One hour of class cost {hr}.','この期間の学費 {t} はすべて使い切りました。授業1時間は {hr}。','이 기간의 등록금 {t}을(를) 모두 썼습니다. 수업 1시간은 {hr}.'],
+cpDoneD:['这段学费 {t} 已经全部花完，在校一小时 {hr}。','這段學費 {t} 已經全部花完，在校一小時 {hr}。','All {t} of this tuition is spent. One hour at school cost {hr}.','この期間の学費 {t} はすべて使い切りました。在校1時間は {hr}。','이 기간의 등록금 {t}을(를) 모두 썼습니다. 등교 1시간은 {hr}.'],
+cpTag:['（学费计价器）','（學費計價器）',' (Tuition Meter)','（学費メーター）',' (등록금 미터기)'],
+
+/* holiday picker and import */
+noHol:['还没有标记放假日期。','還沒有標記放假日期。','No days off marked yet.','休みの日はまだありません。','표시한 휴일이 아직 없습니다.'],
+nDays:['（{n} 天）','（{n} 天）',' ({n} days)','（{n} 日間）',' ({n}일)'],
+rmAria:['删除 {r}','刪除 {r}','Remove {r}','{r} を削除','{r} 삭제'],
+holMarked:['，已标记放假','，已標記放假',', marked as day off','、休みに設定済み',', 휴일로 표시됨'],
+stWorking:['正在识别校历，通常要半分钟到一分钟…','正在辨識校曆，通常要半分鐘到一分鐘…','Reading the calendar. This usually takes 30 to 60 seconds…','学年暦を読み取り中です。通常 30 秒から 1 分かかります…','학사일정을 읽는 중입니다. 보통 30초에서 1분 걸립니다…'],
+rvIcs:['日历文件里的整天日程，勾选要算作放假的','行事曆檔裡的整天行程，勾選要算作放假的','All-day entries in the file. Tick the ones that are days off.','ファイル内の終日の予定です。休みにするものにチェックを入れてください。','파일에 있는 종일 일정입니다. 휴일로 볼 항목을 선택하세요.'],
+rvImg:['从图片里识别到这些，请对照校历核对','從圖片裡辨識到這些，請對照校曆核對','Found in the image. Check these against your calendar.','画像から読み取った内容です。学年暦と照らして確認してください。','이미지에서 읽은 내용입니다. 학사일정과 대조해 확인하세요.'],
+unnamed:['未命名','未命名','Untitled','名称なし','이름 없음'],
+termApply:['同时把开学和结课日期改成 {a} 到 {b}','同時把開學和結課日期改成 {a} 到 {b}','Also set the first and last day to {a} – {b}','開始日と終了日も {a} 〜 {b} に変更する','개강일과 종강일도 {a} ~ {b}(으)로 변경'],
+apMarked:['已标记 {n} 天放假。','已標記 {n} 天放假。','Marked {n} day(s) off. ','{n} 日を休みにしました。','{n}일을 휴일로 표시했습니다. '],
+apTerm:['开学和结课日期已更新。','開學和結課日期已更新。','First and last day updated. ','開始日と終了日を更新しました。','개강일과 종강일을 변경했습니다. '],
+apCheck:['核对一下日历，再点保存。','核對一下行事曆，再點儲存。','Check the calendar, then save.','カレンダーを確認してから保存してください。','달력을 확인한 뒤 저장하세요.'],
+apNone:['没有勾选任何日期。','沒有勾選任何日期。','Nothing was ticked.','何も選択されていません。','선택한 날짜가 없습니다.'],
+icsNone:['这个文件里没有找到整天的日程，可以直接在日历上点选。','這個檔案裡沒有找到整天的行程，可以直接在行事曆上點選。','No all-day entries found in this file. You can pick days on the calendar instead.','このファイルに終日の予定は見つかりませんでした。カレンダーで直接選べます。','이 파일에서 종일 일정을 찾지 못했습니다. 달력에서 직접 고를 수 있습니다.'],
+icsBad:['这个文件读不出来，请确认它是 .ics 日历文件。','這個檔案讀不出來，請確認它是 .ics 行事曆檔。','This file could not be read. Make sure it is an .ics calendar file.','このファイルは読み込めません。.ics ファイルか確認してください。','이 파일을 읽을 수 없습니다. .ics 달력 파일인지 확인하세요.'],
+imgNone:['没有在图片里认出放假日期。换一张更清楚的图，或直接在日历上点选。','沒有在圖片裡認出放假日期。換一張更清楚的圖，或直接在行事曆上點選。','No days off were found in the image. Try a clearer picture, or pick days on the calendar.','画像から休みの日を読み取れませんでした。より鮮明な画像を試すか、カレンダーで選んでください。','이미지에서 휴일을 찾지 못했습니다. 더 선명한 이미지를 쓰거나 달력에서 고르세요.'],
+impNote:['识别时的备注：{n}','辨識時的備註：{n}','Note from the reading: {n}','読み取り時のメモ：{n}','인식 메모: {n}'],
+ieCancel:['已停止识别。','已停止辨識。','Stopped.','中止しました。','중지했습니다.'],
+ieRate:['现在用量到上限了，过一会儿再试。','現在用量到上限了，過一會兒再試。','The usage limit has been reached. Try again later.','利用上限に達しました。しばらくしてからもう一度お試しください。','사용 한도에 도달했습니다. 잠시 후 다시 시도하세요.'],
+ieSession:['登录已过期，重新登录后再试。','登入已過期，重新登入後再試。','Your session expired. Sign in again and retry.','ログインの有効期限が切れました。再度ログインしてお試しください。','로그인이 만료되었습니다. 다시 로그인한 뒤 시도하세요.'],
+ieImage:['这张图片用不了（格式不支持或太大），换一张 JPG 或 PNG 截图试试。','這張圖片用不了（格式不支援或太大），換一張 JPG 或 PNG 截圖試試。','This image cannot be used (unsupported format or too large). Try a JPG or PNG screenshot.','この画像は使えません（形式が非対応か大きすぎます）。JPG か PNG のスクリーンショットをお試しください。','이 이미지는 사용할 수 없습니다(지원하지 않는 형식이거나 너무 큼). JPG나 PNG 캡처로 시도하세요.'],
+ieRefused:['没能读懂这张图片，换一张更清楚的试试。','沒能讀懂這張圖片，換一張更清楚的試試。','The image could not be read. Try a clearer one.','この画像は読み取れませんでした。より鮮明な画像をお試しください。','이미지를 읽지 못했습니다. 더 선명한 이미지로 시도하세요.'],
+ieJson:['识别结果读不出来，再试一次。','辨識結果讀不出來，再試一次。','The result could not be read. Try again.','結果を読み取れませんでした。もう一度お試しください。','결과를 읽지 못했습니다. 다시 시도하세요.'],
+ieUnavail:['这里用不了图片识别，可以直接在日历上点选。','這裡用不了圖片辨識，可以直接在行事曆上點選。','Image reading is not available here. You can pick days on the calendar instead.','ここでは画像の読み取りは使えません。カレンダーで直接選べます。','여기서는 이미지 인식을 쓸 수 없습니다. 달력에서 직접 고를 수 있습니다.'],
+ieOther:['识别时出了点问题，稍后再试。','辨識時出了點問題，稍後再試。','Something went wrong while reading. Try again later.','読み取り中に問題が発生しました。後でもう一度お試しください。','읽는 중 문제가 생겼습니다. 나중에 다시 시도하세요.'],
+
+/* weekly timetable */
+wkTitle:['课表','課表','Timetable','時間割','시간표'],
+wkThis:['回到本周','回到本週','This week','今週に戻る','이번 주로'],
+wkPrev:['上一周','上一週','Previous week','前の週','이전 주'],
+wkNext:['下一周','下一週','Next week','次の週','다음 주'],
+nowClass:['正在上','正在上','In class now','授業中','지금 수업'],
+nextClass:['下节课','下節課','Next class','次の授業','다음 수업'],
+endsIn:['还剩 {t}','還剩 {t}','{t} left','残り {t}','{t} 남음'],
+startsIn:['{t} 后开始','{t} 後開始','starts in {t}','{t} 後に開始','{t} 후 시작'],
+worth:['价值 {a}','價值 {a}','worth {a}','{a} 相当','{a} 상당'],
+noNext:['这学期没有更多课了。','這學期沒有更多課了。','No more classes this term.','この学期の授業はもうありません。','이번 학기에 남은 수업이 없습니다.'],
+noTimetable:['还没有填课表，填好后这里会显示每周的课和下节课。','還沒有填課表，填好後這裡會顯示每週的課和下節課。','No timetable yet. Once you add one, your week and next class show up here.','時間割がまだありません。入力すると、週の授業と次の授業がここに表示されます。','시간표가 아직 없습니다. 입력하면 이번 주 수업과 다음 수업이 여기에 표시됩니다.'],
+addTimetable:['去填课表','去填課表','Add timetable','時間割を入力','시간표 입력'],
+dayHoliday:['放假','放假','Day off','休み','휴일'],
+dayNoClass:['没课','沒課','No class','授業なし','수업 없음'],
+dayOutside:['学期外','學期外','Outside term','学期外','학기 외'],
+tagNow:['正在上','正在上','Now','授業中','진행 중'],
+tagNext:['下节','下節','Next','次','다음'],
+wkDayMode:['全天在校模式：课表只用来看课，计费仍按全天在校时间算。','全天在校模式：課表只用來看課，計費仍按全天在校時間算。','All-day mode: the timetable is for reference; billing still covers your whole day at school.','終日モード：時間割は確認用で、課金は在校時間全体のままです。','종일 모드: 시간표는 참고용이며 과금은 등교 시간 전체 기준입니다.'],
+fSessionsHintDay:['全天模式下，课表只用来看每周的课和下节课，不影响计费。','全天模式下，課表只用來看每週的課和下節課，不影響計費。','In all-day mode the timetable only shows your week and next class; it does not change billing.','終日モードでは、時間割は週の授業と次の授業の表示だけに使われ、課金には影響しません。','종일 모드에서 시간표는 주간 수업과 다음 수업 표시에만 쓰이며 과금에는 영향을 주지 않습니다.'],
+
+/* share code */
+shTitle:['共享码','共享碼','Share code','共有コード','공유 코드'],
+shHint:['把学校名称、学期日期、放假日期、课表和在校时间打包成一段码发给同学，对方导入后就不用再填一遍。学费不会包含在里面。','把學校名稱、學期日期、放假日期、課表和在校時間打包成一段碼傳給同學，對方匯入後就不用再填一遍。學費不會包含在裡面。','Bundle the school name, term dates, days off, timetable and school hours into one code for classmates, so they do not have to fill them in again. Tuition is not included.','学校名・学期の日付・休み・時間割・在校時間をひとつのコードにまとめてクラスメイトに送れます。相手は入力し直す必要がありません。学費は含まれません。','학교 이름, 학기 날짜, 휴일, 시간표, 등교 시간을 코드 하나로 묶어 친구에게 보낼 수 있습니다. 받은 사람은 다시 입력할 필요가 없습니다. 등록금은 포함되지 않습니다.'],
+shMine:['我的共享码','我的共享碼','My share code','自分の共有コード','내 공유 코드'],
+shCopy:['复制','複製','Copy','コピー','복사'],
+shPaste:['粘贴别人的共享码','貼上別人的共享碼',"Paste a classmate's share code",'受け取った共有コードを貼り付け','받은 공유 코드 붙여넣기'],
+shImport:['导入','匯入','Import','読み込む','가져오기'],
+shImportHint:['导入会替换学校名称、学期日期、放假日期、课表和在校时间，学费不变。','匯入會取代學校名稱、學期日期、放假日期、課表和在校時間，學費不變。','Importing replaces the school name, term dates, days off, timetable and school hours. Your tuition stays the same.','読み込むと学校名・学期の日付・休み・時間割・在校時間が置き換わります。学費は変わりません。','가져오면 학교 이름, 학기 날짜, 휴일, 시간표, 등교 시간이 바뀝니다. 등록금은 그대로입니다.'],
+shCopied:['共享码已复制，可以发给同学了','共享碼已複製，可以傳給同學了','Share code copied. Send it to your classmates.','共有コードをコピーしました。クラスメイトに送れます。','공유 코드를 복사했습니다. 친구에게 보내세요.'],
+shSelect:['没能自动复制，已选中共享码，请手动复制。','沒能自動複製，已選取共享碼，請手動複製。','Could not copy automatically. The code is selected; copy it by hand.','自動でコピーできませんでした。コードを選択したので手動でコピーしてください。','자동으로 복사하지 못했습니다. 코드를 선택해 두었으니 직접 복사하세요.'],
+shBad:['这段共享码读不出来，请确认复制完整。','這段共享碼讀不出來，請確認複製完整。','This share code could not be read. Make sure you copied all of it.','この共有コードは読み取れません。すべてコピーできているか確認してください。','이 공유 코드를 읽을 수 없습니다. 전부 복사했는지 확인하세요.'],
+shEmpty:['先粘贴一段共享码。','先貼上一段共享碼。','Paste a share code first.','先に共有コードを貼り付けてください。','먼저 공유 코드를 붙여넣으세요.'],
+shDone:['已导入“{n}”：{h} 段放假，{c} 段上课时间。学费没有改，核对后点保存。','已匯入「{n}」：{h} 段放假，{c} 段上課時間。學費沒有改，核對後點儲存。','Imported "{n}": {h} day-off period(s) and {c} class block(s). Your tuition is unchanged. Check everything, then save.','「{n}」を読み込みました。休み {h} 件、授業時間帯 {c} 件。学費は変わっていません。確認してから保存してください。','"{n}" 가져오기 완료: 휴일 {h}건, 수업 구간 {c}개. 등록금은 그대로입니다. 확인한 뒤 저장하세요.'],
+exNoteOr:['，也可以','，也可以',', or','、または',', 또는'],
+exNoteShare:['粘贴同学的共享码','貼上同學的共享碼',"paste a classmate's share code",'クラスメイトの共有コードを貼り付ける','친구의 공유 코드 붙여넣기'],
+
+/* timetable import */
+ttImg:['上传课表图片，自动识别','上傳課表圖片，自動辨識','Upload a timetable image','時間割の画像を読み取る','시간표 이미지 인식'],
+ttIcs:['导入 .ics 课表文件','匯入 .ics 課表檔','Import .ics timetable','.ics の時間割を読み込む','.ics 시간표 가져오기'],
+ttReplace:['用勾选的替换现有课表','用勾選的取代現有課表','Replace timetable with ticked','チェックした内容で時間割を置き換え','선택 항목으로 시간표 교체'],
+ttAppend:['追加到现有课表','加到現有課表後面','Add to current timetable','いまの時間割に追加','현재 시간표에 추가'],
+ttWorking:['正在识别课表，通常要半分钟到一分钟…','正在辨識課表，通常要半分鐘到一分鐘…','Reading the timetable. This usually takes 30 to 60 seconds…','時間割を読み取り中です。通常 30 秒から 1 分かかります…','시간표를 읽는 중입니다. 보통 30초에서 1분 걸립니다…'],
+rvTtIcs:['日历文件里的课程，勾选要加入课表的','行事曆檔裡的課程，勾選要加入課表的','Classes found in the file. Tick the ones to add.','ファイル内の授業です。時間割に入れるものにチェックを入れてください。','파일에서 찾은 수업입니다. 시간표에 넣을 항목을 선택하세요.'],
+rvTtImg:['从图片里识别到这些课，请对照课表核对','從圖片裡辨識到這些課，請對照課表核對','Classes found in the image. Check them against your timetable.','画像から読み取った授業です。時間割と照らして確認してください。','이미지에서 읽은 수업입니다. 시간표와 대조해 확인하세요.'],
+ttIcsNone:['这个文件里没有找到带具体时间的课程。','這個檔案裡沒有找到有具體時間的課程。','No classes with clock times were found in this file.','このファイルに時刻のある授業は見つかりませんでした。','이 파일에서 시간이 있는 수업을 찾지 못했습니다.'],
+ttImgNone:['没有在图片里认出课程。换一张更清楚的图，或手动添加。','沒有在圖片裡認出課程。換一張更清楚的圖，或手動新增。','No classes were found in the image. Try a clearer picture, or add them by hand.','画像から授業を読み取れませんでした。より鮮明な画像を試すか、手動で追加してください。','이미지에서 수업을 찾지 못했습니다. 더 선명한 이미지를 쓰거나 직접 추가하세요.'],
+ttAdded:['已加入 {n} 段上课时间。','已加入 {n} 段上課時間。','Added {n} class block(s). ','授業時間帯を {n} 件追加しました。','수업 구간 {n}개를 추가했습니다. '],
+ttNoTime:['其中 {n} 段没有时间，需要你补上。','其中 {n} 段沒有時間，需要你補上。','{n} of them have no times yet; fill those in. ','そのうち {n} 件は時刻がないため、入力が必要です。','그중 {n}개는 시간이 없어 직접 입력해야 합니다. '],
+ttCheck:['核对一下，再点保存。','核對一下，再點儲存。','Check them, then save.','確認してから保存してください。','확인한 뒤 저장하세요.'],
+ttNone:['没有勾选任何课程。','沒有勾選任何課程。','Nothing was ticked.','何も選択されていません。','선택한 수업이 없습니다.'],
+ttWeeksHint:['课表按“每周都一样”计算。单双周或只上几周的课，导入后可能会多算。','課表按「每週都一樣」計算。單雙週或只上幾週的課，匯入後可能會多算。','The timetable is treated as the same every week. Classes that run only in some weeks may be over-counted.','時間割は毎週同じとして計算します。隔週や一部の週だけの授業は多めに計算されることがあります。','시간표는 매주 같다고 보고 계산합니다. 격주나 일부 주에만 있는 수업은 더 많이 계산될 수 있습니다.'],
+draftNote:['已恢复上次没保存的修改，可以接着改。','已恢復上次沒儲存的修改，可以接著改。','Your unsaved changes from last time are back. Carry on where you left off.','前回保存しなかった変更を復元しました。続きから編集できます。','지난번에 저장하지 않은 변경 사항을 불러왔습니다. 이어서 수정하세요.'],
+draftDiscard:['放弃这些修改','放棄這些修改','Discard them','変更を破棄','변경 사항 버리기'],
+
+/* example data */
+exSchool:['示例大学 · 2026 秋季学期','範例大學 · 2026 秋季學期','Example University · Fall 2026','サンプル大学 · 2026年秋学期','예시대학교 · 2026 가을학기'],
+exAm:['上午的课','上午的課','Morning classes','午前の授業','오전 수업'],
+exPm:['下午的课','下午的課','Afternoon classes','午後の授業','오후 수업'],
+exItem:['奶茶','珍珠奶茶','bubble tea','タピオカ','버블티'],
+mySchool:['我的学费','我的學費','My tuition','自分の学費','내 등록금']
+};
+
+const STORE='tuition-meter-v1',LANG_STORE='tuition-meter-lang',DRAFT_STORE='tuition-meter-draft';
+const DAYS=[1,2,3,4,5,6,0]; // Monday first
+const $=id=>document.getElementById(id);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const isDay=c=>c.mode==='day';
+
+function detectLang(){
+  let s='';try{s=localStorage.getItem(LANG_STORE)||''}catch(e){}
+  const i=LANGS.indexOf(s);if(i>=0)return i;
+  const n=String(navigator.language||'en').toLowerCase();
+  if(n.indexOf('zh')===0)return /tw|hk|mo|hant/.test(n)?1:0;
+  if(n.indexOf('ja')===0)return 3;
+  if(n.indexOf('ko')===0)return 4;
+  return 2;
+}
+let LI=detectLang();
+function t(k,v){
+  const e=I18N[k];let s=e?e[LI]:k;
+  if(v)for(const n in v)s=s.split('{'+n+'}').join(v[n]);
+  return s;
+}
+const W=k=>t((isDay(cfg)?'d_':'c_')+k);
+
+/* ---------- locale-aware formatting ---------- */
+const fmtCache={};
+function nf(d){const k='n'+LI+'|'+d;return fmtCache[k]||(fmtCache[k]=new Intl.NumberFormat(LOCALES[LI],{minimumFractionDigits:d,maximumFractionDigits:d}))}
+function df(o){const k='d'+LI+JSON.stringify(o);return fmtCache[k]||(fmtCache[k]=new Intl.DateTimeFormat(LOCALES[LI],o))}
+const money=(v,d=2)=>cfg.currency+nf(d).format(v);
+/* The cheaper a second is, the more decimals the running amounts get, so the last digit still
+   moves at least twice a second (2 to 6 places). The per-second rate keeps 3 significant figures. */
+function liveDec(r){let d=2;while(d<6&&r*Math.pow(10,d)<2)d++;return d}
+function rateDec(r){return r>0?Math.min(8,Math.max(4,Math.ceil(-Math.log10(r))+2)):4}
+const wdName=dow=>df({weekday:LI===2?'short':'narrow'}).format(new Date(2024,0,7+dow)); // 2024-01-07 is a Sunday
+const fmtDay=d=>df({month:'short',day:'numeric',weekday:'short'}).format(d);
+const pad=n=>String(n).padStart(2,'0');
+function hms(sec){
+  sec=Math.max(0,Math.floor(sec));
+  const d=Math.floor(sec/86400);sec-=d*86400;
+  const s=pad(Math.floor(sec/3600))+':'+pad(Math.floor(sec%3600/60))+':'+pad(sec%60);
+  return d?t('dayPrefix',{d})+s:s;
+}
+const hm=ts=>{const d=new Date(ts);return pad(d.getHours())+':'+pad(d.getMinutes())};
+function whenLabel(ts,now){
+  const d=new Date(ts),n=new Date(now);
+  const day0=new Date(n.getFullYear(),n.getMonth(),n.getDate()).getTime();
+  const diff=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()-day0)/864e5);
+  return (diff===0?t('today'):diff===1?t('tomorrow'):diff===2?t('dayAfter'):fmtDay(d))+' '+hm(ts);
+}
+
+/* ---------- config ---------- */
+function defaultCfg(){
+  return {
+    school:t('exSchool'),currency:'¥',tuition:26000,
+    start:'2026-09-07',end:'2027-01-15',
+    holidays:'2026-10-01~2026-10-07\n2027-01-01',
+    item:t('exItem'),itemPrice:18,
+    sessions:[
+      {name:t('exAm'),start:'08:30',end:'11:50',days:[1,2,3,4,5]},
+      {name:t('exPm'),start:'14:00',end:'17:20',days:[1,2,3,4,5]}
+    ],
+    mode:'class',dayStart:'08:00',dayEnd:'17:30',dayDays:[1,2,3,4,5],
+    example:true
+  };
+}
+function norm(c){
+  if(c.mode!=='day')c.mode='class';
+  if(!c.dayStart)c.dayStart='08:00';
+  if(!c.dayEnd)c.dayEnd='17:30';
+  if(!Array.isArray(c.dayDays))c.dayDays=[1,2,3,4,5];
+  if(!Array.isArray(c.sessions))c.sessions=[];
+  return c;
+}
+/* the example follows the page language; the owner's own data is never touched */
+function localizeExample(c){if(!c.example)return c;const d=defaultCfg();d.mode=c.mode;return d}
+function load(){try{const r=localStorage.getItem(STORE);if(r){const c=JSON.parse(r);if(c&&typeof c==='object')return norm(c);}}catch(e){}return null}
+function save(c){try{localStorage.setItem(STORE,JSON.stringify(c))}catch(e){}}
+
+/* ---------- date helpers ---------- */
+const keyOf=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+function parseDate(s){
+  if(!s)return null;
+  const m=String(s).trim().replace(/[\/.]/g,'-').match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(!m)return null;
+  const d=new Date(+m[1],+m[2]-1,+m[3]);
+  return d.getMonth()===+m[2]-1?d:null;
+}
+function toMin(s){const m=/^(\d{1,2}):(\d{2})/.exec(s||'');if(!m)return null;const v=(+m[1])*60+(+m[2]);return v<=1440?v:null}
+function parseHolidays(txt){
+  const set=new Set();let bad=0;
+  String(txt||'').split(/[\n,，、;；]+/).forEach(tok=>{
+    tok=tok.trim();if(!tok)return;
+    const parts=tok.split(/\s*(?:~|～|〜|至|到| to )\s*/);
+    const a=parseDate(parts[0]);const b=parts[1]?parseDate(parts[1]):a;
+    if(!a||!b||b<a||(b-a)/864e5>1500){bad++;return}
+    for(const d=new Date(a);d<=b;d.setDate(d.getDate()+1))set.add(keyOf(d));
+  });
+  return {set,bad};
+}
+
+/* ---------- the model: every billed stretch in the term, with running seconds ----------
+   class mode bills each timetable row; day mode bills one stretch per school day (arrive → leave).
+   Errors come back as I18N keys. */
+function build(c){
+  const s=parseDate(c.start),e=parseDate(c.end);
+  if(!(+c.tuition>0))return {error:'eTuition'};
+  if(!s||!e)return {error:'eDates'};
+  if(e<s)return {error:'eOrder'};
+  if((e-s)/864e5>4000)return {error:'eSpan'};
+  const hol=parseHolidays(c.holidays);
+  const src=isDay(c)?[{name:'',start:c.dayStart,end:c.dayEnd,days:c.dayDays}]:(c.sessions||[]);
+  const sess=src.map(x=>Object.assign({},x,{a:toMin(x.start),b:toMin(x.end)}))
+    .filter(x=>x.a!=null&&x.b!=null&&x.b>x.a&&x.days&&x.days.length);
+  if(!sess.length)return {error:isDay(c)?'eNoSessDay':'eNoSessClass'};
+  const all=[];let total=0,dayCount=0;
+  for(const d=new Date(s);d<=e;d.setDate(d.getDate()+1)){
+    const key=keyOf(d);if(hol.set.has(key))continue;
+    const list=[];
+    for(const x of sess){
+      if(!x.days.includes(d.getDay()))continue;
+      list.push({key,name:x.name||'',
+        st:new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,x.a).getTime(),
+        en:new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,x.b).getTime()});
+    }
+    if(!list.length)continue;
+    list.sort((p,q)=>p.st-q.st);
+    let lastEn=-Infinity,any=false;
+    for(const it of list){ // overlapping rows are only billed once
+      if(it.st<lastEn)it.st=lastEn;
+      if(it.en<=it.st)continue;
+      it.cumBefore=total;total+=(it.en-it.st)/1000;lastEn=it.en;all.push(it);any=true;
+    }
+    if(any)dayCount++;
+  }
+  if(!total)return {error:'eNoTime'};
+  return {all,total,dayCount,rate:+c.tuition/total,badHol:hol.bad};
+}
+
+function stateAt(ts){
+  const A=model.all;
+  let lo=0,hi=A.length-1,idx=-1;
+  while(lo<=hi){const m=(lo+hi)>>1;if(A[m].st<=ts){idx=m;lo=m+1}else hi=m-1}
+  let elapsed=0,cur=null,next=null;
+  if(idx<0){next=A[0]}
+  else{
+    const s=A[idx];
+    if(ts<s.en){cur=s;elapsed=s.cumBefore+(ts-s.st)/1000}
+    else elapsed=s.cumBefore+(s.en-s.st)/1000;
+    next=A[idx+1]||null;
+  }
+  const kind=cur?'class':idx<0?'before':!next?'after':'break'; // 'class' = billing right now, in either mode
+  return {kind,cur,next,elapsed,used:Math.min(elapsed*model.rate,+cfg.tuition)};
+}
+
+/* ---------- state ---------- */
+let cfg=localizeExample(load()||defaultCfg());
+let model=build(cfg);
+if(model.error){cfg=defaultCfg();model=build(cfg)}
+let offset=0,demo=false;
+const now=()=>Date.now()+offset;
+
+/* ---------- ticker ---------- */
+let tickIdx=0,lastTickSwap=0,lastKind='';
+function tickerLines(st,todayUsed){
+  const r=model.rate,ip=+cfg.itemPrice||0,item=cfg.item||t('exItem'),day=isDay(cfg);
+  const cups=v=>ip>0?Math.floor(v/ip):0;
+  if(st.kind==='class'){
+    const whole=(st.cur.en-st.cur.st)/1000*r;
+    const L=day
+      ?[t('td1',{a:money(r*60)}),t('td2',{a:money(todayUsed)}),t('td3',{a:money(r*600)}),t('td4',{a:money(r,rateDec(r))}),t('td5',{a:money(r*3600)})]
+      :[t('tk1',{a:money(r*60)}),t('tk2',{a:money(r*300)}),t('tk3',{a:money(r*600)}),t('tk4',{a:money(r,rateDec(r))}),t('tk5',{a:money(todayUsed)})];
+    if(ip>0)L.splice(1,0,t(day?'td6':'tk6',{a:money(whole),n:cups(whole),item}));
+    return L;
+  }
+  if(st.kind==='before')return [t('tb1'),t('tb2',{a:money(r,rateDec(r))})];
+  if(st.kind==='after')return [t('ta1'),t(day?'ta2d':'ta2c',{h:Math.round(model.total/3600),a:money(r*3600)})];
+  const nxPrice=(st.next.en-st.next.st)/1000*r,p=day?'tbd':'tbc';
+  const L=[t(p+'1'),t(p+'2',{a:money(nxPrice),b:money(r*600)}),t(p+'3',{a:money(+cfg.tuition-st.used)})];
+  if(ip>0)L.push(t(p+'4',{n:cups(nxPrice),item}));
+  return L;
+}
+
+/* ---------- render ---------- */
+let lastListKey='';
+function render(){
+  const ts=now(),st=stateAt(ts),r=model.rate,C=cfg.currency,D=liveDec(r);
+
+  $('status-pill').dataset.k=st.kind;
+  $('status-text').textContent=demo?W('demoOn'):st.kind==='class'?W('on'):st.kind==='break'?W('off'):t(st.kind==='before'?'stBefore':'stAfter');
+  $('btn-demo').hidden=st.kind==='class'&&!demo;
+  $('btn-demo').textContent=demo?t('backNow'):W('demo');
+
+  const todayKey=keyOf(new Date(ts));
+  const todays=model.all.filter(s=>s.key===todayKey);
+  let todayUsed=0;
+  for(const s of todays){if(ts>s.st)todayUsed+=(Math.min(ts,s.en)-s.st)/1000*r}
+
+  $('cur-big').textContent=C;
+  $('rate-sec').textContent=money(r,rateDec(r));
+  const pw=$('prog-wrap');
+  if(st.kind==='class'){
+    const s=st.cur,dur=(s.en-s.st)/1000,el=(ts-s.st)/1000,frac=el/dur;
+    $('meter-label').textContent=W('used');
+    $('class-name').textContent=(s.name?s.name+' · ':'')+hm(s.st)+'–'+hm(s.en);
+    $('big-num').textContent=nf(D).format(el*r);
+    $('side-label').textContent=W('left');
+    $('cur-side').textContent=C;
+    $('side-num').textContent=nf(D).format((dur-el)*r);
+    $('elapsed-label').textContent=W('elapsed');$('elapsed').textContent=hms(el);
+    $('left-label').textContent=W('remain');$('left').textContent=hms(dur-el);
+    pw.hidden=false;
+    const tick=dur>14400?1800:600; // long stretches get 30-minute ticks
+    $('prog-label').textContent=W('prog');
+    $('prog-pct').textContent=nf(2).format(frac*100)+'%';
+    $('prog-fill').style.width=(frac*100)+'%';
+    $('prog-ticks').style.setProperty('--tick',Math.min(100,tick/dur*100)+'%');
+    $('prog-foot').textContent=t('tickEvery',{n:tick/60});
+  }else if(st.kind==='break'||st.kind==='before'){
+    const nx=st.next,dur=(nx.en-nx.st)/1000;
+    $('meter-label').textContent=W('nextVal');
+    $('class-name').textContent=(nx.name?nx.name+' · ':'')+whenLabel(nx.st,ts);
+    $('big-num').textContent=nf(2).format(dur*r);
+    $('side-label').textContent=t('todayUsed');
+    $('cur-side').textContent=C;
+    $('side-num').textContent=nf(2).format(todayUsed);
+    $('elapsed-label').textContent=W('until');$('elapsed').textContent=hms((nx.st-ts)/1000);
+    $('left-label').textContent=W('nextDur');$('left').textContent=hms(dur);
+    pw.hidden=true;
+  }else{
+    const hrs=t('hours',{n:nf(1).format(model.total/3600)});
+    $('meter-label').textContent=t('allUsed');
+    $('class-name').textContent='';
+    $('big-num').textContent=nf(2).format(+cfg.tuition);
+    $('side-label').textContent=t(isDay(cfg)?'totalDayHours':'totalClassHours');
+    $('cur-side').textContent='';
+    $('side-num').textContent=hrs;
+    $('elapsed-label').textContent=W('elapsed');$('elapsed').textContent=hrs;
+    $('left-label').textContent=W('remain');$('left').textContent='0';
+    pw.hidden=true;
+  }
+
+  const pct=st.elapsed/model.total;
+  $('t-today').textContent=money(todayUsed,st.kind==='class'?D:2);
+  $('t-used').textContent=money(st.used,D);
+  $('t-used-sub').textContent=t('ofTotal',{a:money(+cfg.tuition,0),p:nf(2).format(Math.min(1,pct)*100)});
+  $('t-used-bar').style.width=(Math.min(1,pct)*100)+'%';
+  $('t-left').textContent=money(Math.max(0,+cfg.tuition-st.used),0);
+  $('t-pct').textContent=nf(2).format(pct*100)+'%';
+  $('t-bar').style.width=(pct*100)+'%';
+
+  // today list (re-render only when something visible changes)
+  const listKey=todayKey+'|'+st.kind+'|'+(st.cur?st.cur.st:'')+'|'+Math.floor(ts/5000);
+  if(listKey!==lastListKey){lastListKey=listKey;renderList(todays,ts,r,st)}
+
+  // ticker
+  if(st.kind!==lastKind||Math.abs(ts-lastTickSwap)>7000){
+    const lines=tickerLines(st,todayUsed);
+    if(st.kind!==lastKind)tickIdx=0;else tickIdx=(tickIdx+1)%lines.length;
+    const el=$('ticker'),txt=lines[tickIdx%lines.length];
+    if(lastKind){el.classList.add('fade');setTimeout(()=>{el.textContent=txt;el.classList.remove('fade')},350)}
+    else el.textContent=txt;
+    lastKind=st.kind;lastTickSwap=ts;
+  }
+  renderWeek(ts);
+}
+
+function renderList(todays,ts,r,st){
+  const ul=$('today-list');ul.textContent='';
+  const day=isDay(cfg);
+  $('today-title').textContent=fmtDay(new Date(ts))+' · '+W('list');
+  if(!todays.length){
+    const li=document.createElement('li');li.className='empty';
+    li.textContent=st.next?t(day?'noSchoolNext':'noClassNext',{w:whenLabel(st.next.st,ts)}):t(day?'noSchool':'noClass');
+    ul.appendChild(li);return;
+  }
+  for(const s of todays){
+    const dur=(s.en-s.st)/1000,li=document.createElement('li');
+    let cls,state;
+    if(ts>=s.en){cls='done';state=t('lDone',{a:money(dur*r)})}
+    else if(ts>=s.st){cls='now';state=t('lNow',{a:money((ts-s.st)/1000*r),p:Math.floor((ts-s.st)/1000/dur*100)})}
+    else{cls='next';state=t('lNext',{a:money(r*60)})}
+    li.className=cls;
+    const a=document.createElement('span');a.className='t';a.textContent=hm(s.st)+'–'+hm(s.en);
+    const b=document.createElement('span');b.className='n';b.textContent=s.name||W('item');
+    const c=document.createElement('span');c.className='p';c.textContent=money(dur*r);
+    const e=document.createElement('span');e.className='s';e.textContent=state;
+    li.append(a,b,c,e);ul.appendChild(li);
+  }
+}
+
+function renderStatic(){
+  const r=model.rate,day=isDay(cfg);
+  $('school-name').textContent=cfg.school||t('mySchool');
+  $('example-note').hidden=!cfg.example;
+  $('mode-class').setAttribute('aria-pressed',String(!day));
+  $('mode-day').setAttribute('aria-pressed',String(day));
+  $('mode-desc').textContent=W('desc');
+  $('btn-copy').textContent=W('copy');
+  $('r-min').textContent=money(r*60);
+  $('r-hour').textContent=money(r*3600);
+  $('r-day-label').textContent=W('rday');
+  $('r-day').textContent=money(+cfg.tuition/model.dayCount);
+  $('method').textContent=t(day?'mDay':'mClass',{t:money(+cfg.tuition,0),d:model.dayCount,h:nf(1).format(model.total/3600),r:money(r,rateDec(r))})+t('mLocal');
+  lastListKey='';lastKind='';
+  refreshTT();
+}
+
+/* fill every element marked data-i18n / data-i18n-aria / data-i18n-ph */
+function applyI18n(){
+  document.documentElement.lang=LOCALES[LI];
+  document.title=t('title');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n)});
+  document.querySelectorAll('[data-i18n-aria]').forEach(el=>{el.setAttribute('aria-label',t(el.dataset.i18nAria))});
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{el.placeholder=t(el.dataset.i18nPh)});
+  $('imp-hint').textContent=t(sampleFn?'holHintAI':'holHint');
+  $('lang').value=String(LI);
+  if(draft)modeUI();
+}
+function setLang(i){
+  if(!(i>=0&&i<LANGS.length))return;
+  LI=i;try{localStorage.setItem(LANG_STORE,LANGS[i])}catch(e){}
+  if(cfg.example){cfg=localizeExample(cfg);model=build(cfg)}
+  applyI18n();renderStatic();render();
+}
+$('lang').addEventListener('change',e=>setLang(+e.target.value));
+function setTheme(v){
+  if(v!=='dark'&&v!=='auto')v='light';
+  if(v==='light')document.documentElement.removeAttribute('data-tm-theme');
+  else document.documentElement.setAttribute('data-tm-theme',v);
+  try{localStorage.setItem('tuition-meter-theme',v)}catch(e){}
+  $('theme').value=v;
+}
+$('theme').value=document.documentElement.getAttribute('data-tm-theme')||'light';
+$('theme').addEventListener('change',e=>setTheme(e.target.value));
+
+/* ---------- switching mode from the main page ---------- */
+function setMode(m){
+  if(cfg.mode===m)return;
+  const next=Object.assign(clone(cfg),{mode:m}),mod=build(next);
+  if(mod.error){openSettings(m);toast(t(mod.error));return}
+  cfg=next;model=mod;save(cfg);offset=0;demo=false;renderStatic();render();
+}
+$('mode-class').addEventListener('click',()=>setMode('class'));
+$('mode-day').addEventListener('click',()=>setMode('day'));
+
+/* ---------- settings ---------- */
+let draft=null;
+/* Saved settings always come back when the panel opens. Edits that were NOT saved are kept too
+   (in this browser), so closing the panel or reloading mid-edit does not lose them: the panel
+   reopens where the person left off, with a way to throw those edits away. */
+function loadDraft(){try{const r=localStorage.getItem(DRAFT_STORE);if(r){const c=JSON.parse(r);if(c&&typeof c==='object')return norm(c)}}catch(e){}return null}
+function clearDraft(){try{localStorage.removeItem(DRAFT_STORE)}catch(e){}}
+function persistDraft(){
+  if(!draft)return;
+  try{
+    if(JSON.stringify(draft)===JSON.stringify(norm(clone(cfg))))localStorage.removeItem(DRAFT_STORE);
+    else localStorage.setItem(DRAFT_STORE,JSON.stringify(draft));
+  }catch(e){}
+}
+function dayBoxes(prefix,suffix,checked){ // seven weekday toggles, Monday first
+  const frag=document.createDocumentFragment();
+  for(const d of DAYS){
+    const lb=document.createElement('label'),cb=document.createElement('input'),sp=document.createElement('span');
+    lb.className='day';cb.type='checkbox';cb.id=prefix+d+suffix;cb.checked=checked.includes(d);
+    cb.setAttribute('aria-label',df({weekday:'long'}).format(new Date(2024,0,7+d)));
+    sp.textContent=wdName(d);lb.append(cb,sp);frag.appendChild(lb);
+  }
+  return frag;
+}
+function fillForm(){
+  $('f-school').value=draft.school||'';
+  $('f-currency').value=draft.currency||'¥';
+  $('f-tuition').value=draft.tuition||'';
+  $('f-start').value=draft.start||'';
+  $('f-end').value=draft.end||'';
+  $('f-holidays').value=draft.holidays||'';
+  $('f-item').value=draft.item||'';
+  $('f-item-price').value=draft.itemPrice||'';
+  $('f-day-start').value=draft.dayStart||'';
+  $('f-day-end').value=draft.dayEnd||'';
+  const dd=$('f-day-days');dd.textContent='';dd.appendChild(dayBoxes('f-dd-','',draft.dayDays));
+  renderSessions();modeUI();
+  hset=parseHolidays(draft.holidays).set;lastPick=null;calMonth=initMonth();
+  $('f-share-in').value='';setShareStatus('');
+  resetImport();resetTt();renderChips();renderCal();preview();
+}
+function modeUI(){
+  const day=isDay(draft),cb=$('f-class-box'),db=$('f-day-box');
+  $('f-mode-class').setAttribute('aria-pressed',String(!day));
+  $('f-mode-day').setAttribute('aria-pressed',String(day));
+  // the timetable stays editable in both modes (it drives the weekly view); in all-day mode the
+  // school hours that are billed come first
+  db.hidden=!day;
+  if(day&&db.nextElementSibling!==cb)cb.parentNode.insertBefore(db,cb);
+  if(!day&&cb.nextElementSibling!==db)cb.parentNode.insertBefore(cb,db);
+  $('f-sessions-hint').textContent=t(day?'fSessionsHintDay':'fSessionsHint');
+}
+function openSettings(mode){
+  const kept=loadDraft();
+  draft=kept||norm(clone(cfg));
+  if(mode==='class'||mode==='day')draft.mode=mode;
+  $('draft-note').hidden=!kept;
+  fillForm();
+  $('drawer').hidden=false;
+  $('f-tuition').focus();
+}
+function closeSettings(){if(impCtl)impCtl.abort();if(ttCtl)ttCtl.abort();$('drawer').hidden=true;$('btn-settings').focus()}
+function renderSessions(){
+  const box=$('f-sessions');box.textContent='';
+  draft.sessions.forEach((s,i)=>{
+    const row=document.createElement('div');row.className='srow';
+    const name=document.createElement('input');name.className='in sname';name.id='s-name-'+i;name.maxLength=30;name.placeholder=t('sNamePh');name.value=s.name||'';
+    const a=document.createElement('input');a.className='in';a.type='time';a.id='s-start-'+i;a.setAttribute('aria-label',t('startAria'));a.value=s.start||'';
+    const mid=document.createElement('span');mid.className='label';mid.textContent=t('to');
+    const b=document.createElement('input');b.className='in';b.type='time';b.id='s-end-'+i;b.setAttribute('aria-label',t('endAria'));b.value=s.end||'';
+    const days=document.createElement('div');days.className='days';days.appendChild(dayBoxes('s-d','-'+i,s.days||[]));
+    const del=document.createElement('button');del.type='button';del.className='x';del.dataset.del=String(i);del.textContent=t('delSession');
+    days.appendChild(del);
+    row.append(name,a,mid,b,days);box.appendChild(row);
+  });
+}
+function readForm(){
+  draft.school=$('f-school').value.trim();
+  draft.currency=$('f-currency').value.trim()||'¥';
+  draft.tuition=parseFloat($('f-tuition').value)||0;
+  draft.start=$('f-start').value;draft.end=$('f-end').value;
+  draft.holidays=$('f-holidays').value;
+  draft.item=$('f-item').value.trim();
+  draft.itemPrice=parseFloat($('f-item-price').value)||0;
+  draft.sessions=draft.sessions.map((s,i)=>({
+    name:$('s-name-'+i).value.trim(),start:$('s-start-'+i).value,end:$('s-end-'+i).value,
+    days:DAYS.filter(d=>$('s-d'+d+'-'+i).checked)
+  }));
+  draft.dayStart=$('f-day-start').value;draft.dayEnd=$('f-day-end').value;
+  draft.dayDays=DAYS.filter(d=>$('f-dd-'+d).checked);
+}
+function preview(){
+  persistDraft();scheduleShare();
+  const m=build(draft),p=$('f-preview');
+  if(m.error){p.className='preview err';p.textContent=t(m.error);$('btn-save').disabled=true;return}
+  const cur=draft.currency||'¥',f=(v,d=2)=>cur+nf(d).format(v);
+  p.className='preview';
+  p.textContent=t(isDay(draft)?'pvDay':'pvClass',{d:m.dayCount,h:nf(1).format(m.total/3600)})
+    +t('pvRates',{s:f(m.rate,rateDec(m.rate)),m:f(m.rate*60),hr:f(m.rate*3600)})
+    +(m.badHol?t('pvBad',{n:m.badHol}):'');
+  $('btn-save').disabled=false;
+}
+function onFormChange(e){
+  readForm();
+  if(e&&e.target&&e.target.id==='f-holidays'){hset=parseHolidays(draft.holidays).set;renderChips()}
+  renderCal();preview();
+}
+$('form').addEventListener('input',onFormChange);
+$('form').addEventListener('change',onFormChange);
+$('f-mode-class').addEventListener('click',()=>{readForm();draft.mode='class';modeUI();renderCal();preview()});
+$('f-mode-day').addEventListener('click',()=>{readForm();draft.mode='day';modeUI();renderCal();preview()});
+$('f-sessions').addEventListener('click',e=>{
+  const i=e.target&&e.target.dataset?e.target.dataset.del:undefined;if(i==null)return;
+  readForm();draft.sessions.splice(+i,1);renderSessions();renderCal();preview();
+});
+$('btn-add').addEventListener('click',()=>{
+  readForm();
+  const last=draft.sessions[draft.sessions.length-1];
+  draft.sessions.push(last?{name:'',start:last.end||'14:00',end:'',days:last.days.slice()}:{name:'',start:'08:00',end:'09:40',days:[1,2,3,4,5]});
+  renderSessions();preview();
+  $('s-end-'+(draft.sessions.length-1)).focus();
+});
+$('btn-reset').addEventListener('click',()=>{const m=draft.mode;draft=defaultCfg();draft.mode=m;fillForm()});
+$('btn-draft-discard').addEventListener('click',()=>{clearDraft();draft=norm(clone(cfg));$('draft-note').hidden=true;fillForm()});
+/* Save runs from the button's click, never from a form submission: the frame a published page
+   runs in can block submissions outright, and then the submit event never fires at all. */
+$('form').addEventListener('submit',e=>e.preventDefault());
+$('btn-save').addEventListener('click',()=>{
+  readForm();const m=build(draft);if(m.error){preview();return}
+  draft.example=JSON.stringify(Object.assign({},draft,{example:true,mode:'class'}))===JSON.stringify(defaultCfg());
+  cfg=draft;model=m;save(cfg);clearDraft();offset=0;demo=false;renderStatic();render();closeSettings();toast(t('saved'));
+});
+$('btn-settings').addEventListener('click',()=>openSettings());
+$('btn-settings-2').addEventListener('click',()=>openSettings());
+$('btn-share-2').addEventListener('click',()=>{openSettings();$('f-share-in').focus()});
+$('btn-close').addEventListener('click',closeSettings);
+$('drawer').addEventListener('click',e=>{if(e.target===$('drawer'))closeSettings()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').hidden)closeSettings()});
+
+/* ---------- holidays: click-to-pick calendar ---------- */
+let hset=new Set(),calMonth=null,lastPick=null;
+function initMonth(){
+  const n=new Date(),s=parseDate(draft.start),e=parseDate(draft.end);
+  const base=(s&&e&&(n<s||n>e))?s:n;
+  return new Date(base.getFullYear(),base.getMonth(),1);
+}
+function nextKey(k){const d=parseDate(k);d.setDate(d.getDate()+1);return keyOf(d)}
+function rangesOf(set){
+  const out=[];
+  for(const k of [...set].sort()){
+    const last=out[out.length-1];
+    if(last&&nextKey(last.to)===k)last.to=k;else out.push({from:k,to:k});
+  }
+  return out;
+}
+function daysIn(r){return Math.round((parseDate(r.to)-parseDate(r.from))/864e5)+1}
+function fmtRange(r){
+  const a=parseDate(r.from),b=parseDate(r.to),f=df({year:'numeric',month:'short',day:'numeric'});
+  if(r.from===r.to)return f.format(a);
+  // English and Korean have tidy built-in range wording; Chinese and Japanese fall back to slashes there, so join by hand
+  if(LI===2||LI===4){try{if(f.formatRange)return f.formatRange(a,b)}catch(e){}}
+  const tail=a.getFullYear()===b.getFullYear()?df({month:'short',day:'numeric'}).format(b):f.format(b);
+  return f.format(a)+(LI===3?'〜':' – ')+tail;
+}
+function holText(){return rangesOf(hset).map(r=>r.from===r.to?r.from:r.from+'~'+r.to).join('\n')}
+function commitHol(){const txt=holText();$('f-holidays').value=txt;draft.holidays=txt;renderCal();renderChips();preview()}
+function renderCal(){
+  if(!draft||!calMonth)return;
+  const g=$('cal-grid'),y=calMonth.getFullYear(),m=calMonth.getMonth();
+  const ae=document.activeElement,focusKey=ae&&ae.dataset?ae.dataset.key:null;
+  $('cal-title').textContent=df({year:'numeric',month:'long'}).format(calMonth);
+  const s=parseDate(draft.start),e=parseDate(draft.end),todayK=keyOf(new Date());
+  const billed=new Set(isDay(draft)?draft.dayDays:[].concat(...draft.sessions.map(x=>x.days||[])));
+  const full=df({month:'long',day:'numeric',weekday:'long'});
+  g.textContent='';
+  for(const d of DAYS){const h=document.createElement('div');h.className='cal-wd';h.textContent=wdName(d);g.appendChild(h)}
+  const lead=(new Date(y,m,1).getDay()+6)%7,n=new Date(y,m+1,0).getDate();
+  for(let i=0;i<lead;i++)g.appendChild(document.createElement('span'));
+  for(let d=1;d<=n;d++){
+    const dt=new Date(y,m,d),k=keyOf(dt),b=document.createElement('button'),on=hset.has(k);
+    b.type='button';b.textContent=d;b.dataset.key=k;
+    b.className='cal-d'+(billed.has(dt.getDay())?'':' off')+(k===todayK?' today':'')+(on?' hol':'');
+    if((s&&dt<s)||(e&&dt>e))b.disabled=true;
+    b.setAttribute('aria-pressed',String(on));
+    b.setAttribute('aria-label',full.format(dt)+(on?t('holMarked'):''));
+    g.appendChild(b);
+    if(k===focusKey)b.focus();
+  }
+}
+function renderChips(){
+  const box=$('hol-chips');box.textContent='';
+  const rs=rangesOf(hset);
+  if(!rs.length){const s=document.createElement('small');s.textContent=t('noHol');box.appendChild(s);return}
+  rs.forEach(r=>{
+    const c=document.createElement('span');c.className='chip';
+    const go=document.createElement('button');go.type='button';go.className='go';
+    go.textContent=fmtRange(r)+(r.from===r.to?'':t('nDays',{n:daysIn(r)}));go.dataset.go=r.from;
+    const rm=document.createElement('button');rm.type='button';rm.className='rm';rm.textContent='×';
+    rm.dataset.rm=r.from+'|'+r.to;rm.setAttribute('aria-label',t('rmAria',{r:fmtRange(r)}));
+    c.append(go,rm);box.appendChild(c);
+  });
+}
+function addRange(fromK,toK){
+  const d=parseDate(fromK),z=parseDate(toK);if(!d||!z)return 0;let n=0;
+  for(;d<=z&&n<1500;d.setDate(d.getDate()+1)){hset.add(keyOf(d));n++}
+  return n;
+}
+$('cal-grid').addEventListener('click',e=>{
+  const b=e.target&&e.target.closest?e.target.closest('.cal-d'):null;if(!b||b.disabled)return;
+  const k=b.dataset.key;
+  if(e.shiftKey&&lastPick&&lastPick!==k)addRange(lastPick<k?lastPick:k,lastPick<k?k:lastPick);
+  else if(hset.has(k))hset.delete(k);else hset.add(k);
+  lastPick=k;commitHol();
+});
+$('cal-prev').addEventListener('click',()=>{calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()-1,1);renderCal()});
+$('cal-next').addEventListener('click',()=>{calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+1,1);renderCal()});
+$('hol-chips').addEventListener('click',e=>{
+  const el=e.target;if(!el||!el.dataset)return;
+  if(el.dataset.go){const d=parseDate(el.dataset.go);calMonth=new Date(d.getFullYear(),d.getMonth(),1);renderCal()}
+  else if(el.dataset.rm){
+    const p=el.dataset.rm.split('|');
+    for(const d=parseDate(p[0]),z=parseDate(p[1]);d<=z;d.setDate(d.getDate()+1))hset.delete(keyOf(d));
+    commitHol();
+  }
+});
+
+/* ---------- holidays: import a school calendar ----------
+   .ics files are parsed here in the page. A picture of the calendar is read by Claude
+   (the `sample` capability), which only exists when the page is opened on claude.ai. */
+let impItems=[],impTerm=null,impCtl=null,sampleFn=null;
+const HOL_RE=/假|休|停课|停課|不上课|不上課|祝日|방학|휴일|휴강|공휴|holiday|break|vacation|recess|no class|reading week|closed/i;
+function setStatus(msg,err){const p=$('imp-status');p.textContent=msg||'';p.hidden=!msg;p.className='imp-status'+(err?' err':'')}
+function resetImport(){impItems=[];impTerm=null;$('imp-review').hidden=true;setStatus('')}
+function cleanItems(arr){
+  const out=[],seen=new Set();
+  if(!Array.isArray(arr))return out;
+  for(const x of arr){
+    if(!x||typeof x!=='object')continue;
+    const a=parseDate(x.from),b=parseDate(x.to||x.from);
+    if(!a||!b||b<a||(b-a)/864e5>400)continue;
+    const it={name:String(x.name||'').slice(0,40),from:keyOf(a),to:keyOf(b),on:x.on!==false};
+    const id=it.from+'|'+it.to;if(seen.has(id))continue;seen.add(id);out.push(it);
+    if(out.length>=200)break;
+  }
+  return out.sort((p,q)=>p.from<q.from?-1:p.from>q.from?1:0);
+}
+function parseICS(txt){
+  const lines=String(txt).replace(/\r\n?/g,'\n').replace(/\n[ \t]/g,'').split('\n');
+  const out=[];let ev=null;
+  for(const ln of lines){
+    if(ln==='BEGIN:VEVENT'){ev={};continue}
+    if(ln==='END:VEVENT'){
+      if(ev&&ev.from){
+        const to=ev.to&&ev.to>=ev.from?ev.to:ev.from;
+        // keep whole-day or multi-day entries; timed single-day entries are lessons, not holidays
+        if(ev.allDay||to>ev.from)out.push({name:ev.name||'',from:keyOf(ev.from),to:keyOf(to),on:HOL_RE.test(ev.name||'')});
+      }
+      ev=null;continue;
+    }
+    if(!ev)continue;
+    const i=ln.indexOf(':');if(i<0)continue;
+    const name=ln.slice(0,i).split(';')[0].toUpperCase(),val=ln.slice(i+1).trim();
+    if(name==='SUMMARY')ev.name=val.replace(/\\n/gi,' ').replace(/\\([,;\\])/g,'$1').trim();
+    else if(name==='DTSTART'||name==='DTEND'){
+      const m=/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2}))?/.exec(val);if(!m)continue;
+      const d=new Date(+m[1],+m[2]-1,+m[3]),allDay=!m[4];
+      if(name==='DTSTART'){ev.from=d;ev.allDay=allDay}
+      else{if(allDay||(m[4]==='00'&&m[5]==='00'))d.setDate(d.getDate()-1);ev.to=d} // DTEND is exclusive
+    }
+  }
+  return cleanItems(out);
+}
+function showReview(items,term,title){
+  impItems=items;impTerm=term;
+  $('imp-review-title').textContent=title;
+  const ul=$('imp-list');ul.textContent='';
+  items.forEach((it,i)=>{
+    const li=document.createElement('li'),lb=document.createElement('label'),cb=document.createElement('input'),sp=document.createElement('span');
+    cb.type='checkbox';cb.id='imp-c-'+i;cb.checked=it.on;
+    sp.textContent=(it.name||t('unnamed'))+' · '+fmtRange(it)+t('nDays',{n:daysIn(it)});
+    lb.append(cb,sp);li.appendChild(lb);ul.appendChild(li);
+  });
+  $('imp-term-row').hidden=!term;
+  if(term){$('imp-term').checked=true;$('imp-term-text').textContent=t('termApply',{a:term.start,b:term.end})}
+  $('btn-imp-apply').hidden=!items.length&&!term;
+  $('imp-review').hidden=false;
+}
+$('btn-imp-apply').addEventListener('click',()=>{
+  let n=0,first=null;
+  impItems.forEach((it,i)=>{if($('imp-c-'+i).checked){n+=addRange(it.from,it.to);if(!first)first=it.from}});
+  const useTerm=impTerm&&$('imp-term').checked;
+  if(useTerm){$('f-start').value=impTerm.start;$('f-end').value=impTerm.end}
+  readForm();
+  if(first){const d=parseDate(first);calMonth=new Date(d.getFullYear(),d.getMonth(),1)}
+  commitHol();
+  $('imp-review').hidden=true;impItems=[];impTerm=null;
+  setStatus((n?t('apMarked',{n}):'')+(useTerm?t('apTerm'):'')+(n||useTerm?t('apCheck'):t('apNone')));
+});
+$('btn-imp-cancel').addEventListener('click',resetImport);
+
+$('btn-imp-ics').addEventListener('click',()=>$('f-imp-ics').click());
+$('f-imp-ics').addEventListener('change',async e=>{
+  const file=e.target.files&&e.target.files[0];e.target.value='';if(!file)return;
+  resetImport();
+  try{
+    const items=parseICS(await file.text());
+    if(!items.length){setStatus(t('icsNone'),true);return}
+    showReview(items,null,t('rvIcs'));
+  }catch(err){setStatus(t('icsBad'),true)}
+});
+
+const IMG_GONE=['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed','images_unavailable'];
+function importErr(code){
+  if(IMG_GONE.includes(code))return t('ieUnavail');
+  return t(({cancelled:'ieCancel',rate_limited:'ieRate',session_expired:'ieSession',image_rejected:'ieImage',refused:'ieRefused',empty_completion:'ieRefused',invalid_json:'ieJson'})[code]||'ieOther');
+}
+async function importImage(file){
+  if(!sampleFn)return;
+  resetImport();
+  impCtl=new AbortController();
+  setStatus(t('stWorking'));
+  $('btn-imp-stop').hidden=false;$('btn-imp-img').disabled=true;
+  const prompt=[
+    'This image is a school academic calendar.',
+    'Find every date range with NO classes: public holidays, winter, summer, spring or autumn breaks, and any other days marked as closed or without classes.',
+    'Do not include ordinary weekends. Do not include exam weeks, make-up class days, sports days or ceremonies that students still attend.',
+    'Also find the first day of classes and the last day of classes (or of exams). If the calendar covers several terms, give the earliest first day and the latest last day. Use null when it is not shown.',
+    'Today is '+keyOf(new Date())+'. The user currently has the term set as '+(draft.start||'unset')+' to '+(draft.end||'unset')+'; use that only to infer the year when the image does not show one.',
+    'Reply with only one JSON object in this shape:',
+    '{"termStart":"YYYY-MM-DD","termEnd":"YYYY-MM-DD","holidays":[{"name":"...","from":"YYYY-MM-DD","to":"YYYY-MM-DD"}],"note":""}',
+    'from and to are both inclusive; a one-day holiday has the same from and to.',
+    'Write every holiday name and the note in '+LANG_NAMES[LI]+'. The note is one sentence about anything unreadable or uncertain, or an empty string.',
+    'If the image is not an academic calendar or cannot be read, return an empty holidays array and explain in the note.'
+  ].join('\n');
+  try{
+    const data=await sampleFn.json(prompt,{images:[file],signal:impCtl.signal});
+    const items=cleanItems(data&&data.holidays);
+    const s0=data&&parseDate(data.termStart),e0=data&&parseDate(data.termEnd);
+    const term=s0&&e0&&e0>s0&&(e0-s0)/864e5<=4000?{start:keyOf(s0),end:keyOf(e0)}:null;
+    const note=data&&typeof data.note==='string'?data.note.trim().slice(0,200):'';
+    if(!items.length&&!term)setStatus(t('imgNone')+(note?' '+t('impNote',{n:note}):''),true);
+    else{showReview(items,term,t('rvImg'));setStatus(note?t('impNote',{n:note}):'')}
+  }catch(err){
+    const code=err&&err.code;
+    setStatus(importErr(code),code!=='cancelled');
+    if(IMG_GONE.includes(code))imgGone();
+  }finally{
+    $('btn-imp-stop').hidden=true;$('btn-imp-img').disabled=false;impCtl=null;
+  }
+}
+$('btn-imp-img').addEventListener('click',()=>$('f-imp-img').click());
+$('btn-imp-stop').addEventListener('click',()=>{if(impCtl)impCtl.abort()});
+$('f-imp-img').addEventListener('change',e=>{
+  const file=e.target.files&&e.target.files[0];e.target.value='';if(file)importImage(file);
+});
+(async()=>{
+  try{
+    if(!window.claude||!window.claude.use)return;
+    const s=await window.claude.use('sample');if(!s)return;
+    const caps=await s.limits().catch(()=>null);if(!caps||!caps.images)return;
+    sampleFn=s;$('btn-imp-img').hidden=false;$('btn-tt-img').hidden=false;
+    if(caps.images.mediaTypes&&caps.images.mediaTypes.length){$('f-imp-img').accept=caps.images.mediaTypes.join(',');$('f-tt-img').accept=$('f-imp-img').accept}
+    $('imp-hint').textContent=t('holHintAI');
+  }catch(e){}
+})();
+
+/* ---------- timetable: import from an .ics file or a picture ----------
+   Both end in the same review list; nothing touches the timetable until the person picks
+   "replace" or "add". Rows are weekly: a class that only runs in some weeks is listed as weekly. */
+let ttItems=[],ttCtl=null,ttNote='';
+const fmtMin=m=>pad(Math.floor(m/60))+':'+pad(m%60);
+function imgGone(){sampleFn=null;$('btn-imp-img').hidden=true;$('btn-tt-img').hidden=true;$('imp-hint').textContent=t('holHint')}
+function setTtStatus(msg,err){const p=$('tt-status');p.textContent=msg||'';p.hidden=!msg;p.className='imp-status'+(err?' err':'')}
+function resetTt(){ttItems=[];ttNote='';$('tt-review').hidden=true;setTtStatus('')}
+/* validate rows from a file or from Claude: days are 1..7 with 7 (or 0) = Sunday, times HH:MM or missing;
+   the same course at the same time on several days is merged into one row */
+function cleanSessions(arr){
+  const out=[],map=new Map();
+  if(!Array.isArray(arr))return out;
+  for(const x of arr){
+    if(!x||typeof x!=='object')continue;
+    const a=toMin(typeof x.start==='string'?x.start:''),b=toMin(typeof x.end==='string'?x.end:'');
+    const start=a!=null&&a<1440?fmtMin(a):'';
+    const end=b!=null&&b<1440&&(!start||b>a)?fmtMin(b):'';
+    const raw=(Array.isArray(x.days)?x.days:[]).map(Number).filter(d=>Number.isInteger(d)&&d>=0&&d<=7).map(d=>d%7);
+    const days=DAYS.filter(d=>raw.includes(d));
+    if(!days.length)continue;
+    const name=String(x.name||'').trim().slice(0,30);
+    if(!name&&!start)continue;
+    const key=name+'|'+start+'|'+end,old=map.get(key);
+    if(old)old.days=DAYS.filter(d=>old.days.includes(d)||days.includes(d));
+    else{const it={name,start,end,days};map.set(key,it);out.push(it)}
+    if(out.length>=60)break;
+  }
+  const first=it=>DAYS.indexOf(it.days[0]),st=it=>it.start||'99';
+  return out.sort((p,q)=>(st(p)<st(q)?-1:st(p)>st(q)?1:0)||first(p)-first(q));
+}
+function icsEvents(txt){
+  const lines=String(txt).replace(/\r\n?/g,'\n').replace(/\n[ \t]/g,'').split('\n');
+  const out=[];let ev=null;
+  for(const ln of lines){
+    if(ln==='BEGIN:VEVENT'){ev={};continue}
+    if(ln==='END:VEVENT'){if(ev)out.push(ev);ev=null;continue}
+    if(!ev)continue;
+    const i=ln.indexOf(':');if(i<0)continue;
+    const name=ln.slice(0,i).split(';')[0].toUpperCase();
+    if(!(name in ev))ev[name]=ln.slice(i+1).trim();
+  }
+  return out;
+}
+function icsClock(val){ // weekday and minutes of a timed DTSTART/DTEND; a trailing Z is UTC, anything else is taken as written
+  const m=/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(?:\d{2})?(Z)?/.exec(val||'');if(!m)return null;
+  const d=m[6]?new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5])):new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]);
+  return {dow:d.getDay(),min:d.getHours()*60+d.getMinutes()};
+}
+const ICS_DOW={SU:0,MO:1,TU:2,WE:3,TH:4,FR:5,SA:6};
+function parseIcsTimetable(txt){
+  const rows=[];
+  for(const ev of icsEvents(txt)){
+    const s=icsClock(ev.DTSTART),e=icsClock(ev.DTEND);
+    if(!s||!e||e.min<=s.min)continue; // all-day entries and anything crossing midnight are not lessons
+    let days=[s.dow];
+    const by=/(?:^|;)BYDAY=([^;]+)/i.exec(ev.RRULE||'');
+    if(by&&/FREQ=WEEKLY/i.test(ev.RRULE)){
+      const list=by[1].split(',').map(x=>ICS_DOW[x.replace(/^[+-]?\d+/,'').toUpperCase()]).filter(x=>x!=null);
+      if(list.length)days=list;
+    }
+    rows.push({name:(ev.SUMMARY||'').replace(/\\n/gi,' ').replace(/\\([,;\\])/g,'$1'),start:fmtMin(s.min),end:fmtMin(e.min),days});
+  }
+  return cleanSessions(rows);
+}
+function showTtReview(items,title){
+  ttItems=items;$('tt-review-title').textContent=title;
+  const ul=$('tt-list'),wd=df({weekday:'short'});ul.textContent='';
+  items.forEach((it,i)=>{
+    const li=document.createElement('li'),lb=document.createElement('label'),cb=document.createElement('input'),sp=document.createElement('span');
+    cb.type='checkbox';cb.id='tt-c-'+i;cb.checked=true;
+    sp.textContent=(it.name||t('unnamed'))+' · '+it.days.map(d=>wd.format(new Date(2024,0,7+d))).join(' ')+' · '+(it.start||'--:--')+'–'+(it.end||'--:--');
+    lb.append(cb,sp);li.appendChild(lb);ul.appendChild(li);
+  });
+  $('tt-review').hidden=false;
+}
+function applyTt(replace){
+  const chosen=ttItems.filter((it,i)=>$('tt-c-'+i).checked).map(it=>({name:it.name,start:it.start,end:it.end,days:it.days.slice()}));
+  if(!chosen.length){setTtStatus(t('ttNone'),true);return}
+  readForm();
+  draft.sessions=replace?chosen:draft.sessions.concat(chosen);
+  renderSessions();renderCal();preview();
+  const missing=chosen.filter(x=>!x.start||!x.end).length;
+  $('tt-review').hidden=true;ttItems=[];
+  setTtStatus(t('ttAdded',{n:chosen.length})+(missing?t('ttNoTime',{n:missing}):'')+t('ttCheck')+(ttNote?' '+t('impNote',{n:ttNote}):''));
+}
+$('btn-tt-replace').addEventListener('click',()=>applyTt(true));
+$('btn-tt-append').addEventListener('click',()=>applyTt(false));
+$('btn-tt-cancel').addEventListener('click',resetTt);
+$('btn-tt-ics').addEventListener('click',()=>$('f-tt-ics').click());
+$('f-tt-ics').addEventListener('change',async e=>{
+  const file=e.target.files&&e.target.files[0];e.target.value='';if(!file)return;
+  resetTt();
+  try{
+    const items=parseIcsTimetable(await file.text());
+    if(!items.length){setTtStatus(t('ttIcsNone'),true);return}
+    showTtReview(items,t('rvTtIcs'));
+  }catch(err){setTtStatus(t('icsBad'),true)}
+});
+async function importTimetableImage(file){
+  if(!sampleFn)return;
+  resetTt();
+  ttCtl=new AbortController();
+  setTtStatus(t('ttWorking'));
+  $('btn-tt-stop').hidden=false;$('btn-tt-img').disabled=true;
+  const prompt=[
+    "This image is a student's weekly class timetable.",
+    'List every class block shown. For each block give the course name, the weekdays it happens on, and its start and end clock time in 24-hour HH:MM.',
+    'Weekdays are numbers: 1 = Monday, 2 = Tuesday, 3 = Wednesday, 4 = Thursday, 5 = Friday, 6 = Saturday, 7 = Sunday.',
+    'If the same course at the same time happens on several weekdays, return one entry that lists all of those weekdays.',
+    'If the timetable uses period numbers and also shows the clock time of each period, convert them to clock times. If it shows only period numbers and no clock times anywhere, set start and end to null and say so in the note.',
+    'If a class runs only in some weeks (odd or even weeks, or a range of weeks), still list it and mention it in the note.',
+    'Keep each course name as it is written in the image.',
+    'Reply with only one JSON object in this shape:',
+    '{"sessions":[{"name":"...","days":[1,3],"start":"08:00","end":"09:40"}],"note":""}',
+    'Write the note in '+LANG_NAMES[LI]+'. The note is one or two short sentences about anything unreadable, uncertain or limited to some weeks, or an empty string.',
+    'If the image is not a timetable or cannot be read, return an empty sessions array and explain in the note.'
+  ].join('\n');
+  try{
+    const data=await sampleFn.json(prompt,{images:[file],signal:ttCtl.signal});
+    const items=cleanSessions(data&&data.sessions);
+    const note=data&&typeof data.note==='string'?data.note.trim().slice(0,240):'';
+    if(!items.length)setTtStatus(t('ttImgNone')+(note?' '+t('impNote',{n:note}):''),true);
+    else{showTtReview(items,t('rvTtImg'));ttNote=note;setTtStatus(note?t('impNote',{n:note}):'')}
+  }catch(err){
+    const code=err&&err.code;
+    setTtStatus(importErr(code),code!=='cancelled');
+    if(IMG_GONE.includes(code))imgGone();
+  }finally{
+    $('btn-tt-stop').hidden=true;$('btn-tt-img').disabled=false;ttCtl=null;
+  }
+}
+$('btn-tt-img').addEventListener('click',()=>$('f-tt-img').click());
+$('btn-tt-stop').addEventListener('click',()=>{if(ttCtl)ttCtl.abort()});
+$('f-tt-img').addEventListener('change',e=>{
+  const file=e.target.files&&e.target.files[0];e.target.value='';if(file)importTimetableImage(file);
+});
+
+/* ---------- weekly timetable on the main page ----------
+   Built from the saved timetable rows (not the billing model), so it also works in all-day mode.
+   Holidays and days outside the term are shown as such. */
+let cfgVer=0,holSet=new Set(),termS=null,termE=null,ttValid=[],nextCache=null,wkOffset=0,wkKey='';
+function refreshTT(){
+  cfgVer++;holSet=parseHolidays(cfg.holidays).set;termS=parseDate(cfg.start);termE=parseDate(cfg.end);
+  ttValid=(cfg.sessions||[]).map(x=>({name:x.name||'',a:toMin(x.start),b:toMin(x.end),days:Array.isArray(x.days)?x.days:[]}))
+    .filter(x=>x.a!=null&&x.b!=null&&x.b>x.a&&x.days.length);
+  nextCache=null;wkKey='';
+}
+function classesOn(d){
+  if(!termS||!termE||d<termS||d>termE)return {state:'out',list:[]};
+  if(holSet.has(keyOf(d)))return {state:'hol',list:[]};
+  const y=d.getFullYear(),m=d.getMonth(),dd=d.getDate(),list=[];
+  for(const x of ttValid)if(x.days.includes(d.getDay()))
+    list.push({name:x.name,st:new Date(y,m,dd,0,x.a).getTime(),en:new Date(y,m,dd,0,x.b).getTime()});
+  list.sort((p,q)=>p.st-q.st);
+  return {state:list.length?'class':'none',list};
+}
+/* the class going on at ts (if any) and the next one to start; cached until either changes */
+function findNext(ts){
+  if(nextCache&&nextCache.v===cfgVer&&ts>=nextCache.from&&ts<nextCache.until)return nextCache;
+  let cur=null,next=null;const d0=new Date(ts);
+  for(let i=0;i<450&&!next;i++){
+    const d=new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()+i);
+    if(termE&&d>termE)break;
+    for(const x of classesOn(d).list){
+      if(x.st<=ts&&ts<x.en){if(!cur)cur=x}
+      else if(x.st>ts){next=x;break}
+    }
+  }
+  nextCache={v:cfgVer,from:ts,until:Math.min(cur?cur.en:Infinity,next?next.st:Infinity),cur,next};
+  return nextCache;
+}
+const sameClass=(a,b)=>!!a&&!!b&&a.st===b.st&&a.name===b.name;
+function ncItem(kind,x,ts){
+  const d=document.createElement('div');d.className='nc-item '+kind;
+  const tg=document.createElement('span');tg.className='nc-tag';tg.textContent=t(kind==='now'?'nowClass':'nextClass');
+  const nm=document.createElement('b');nm.className='nc-name';nm.textContent=x.name||t('c_item');
+  const meta=document.createElement('span');meta.className='nc-meta';
+  const cd=document.createElement('span');cd.dataset.cd=String(kind==='now'?x.en:x.st);cd.dataset.k=kind;
+  meta.append((kind==='now'?hm(x.st):whenLabel(x.st,ts))+'–'+hm(x.en)+' · ',cd,' · '+t('worth',{a:money((x.en-x.st)/1000*model.rate)}));
+  d.append(tg,nm,meta);return d;
+}
+function renderNextCard(ts,nx){
+  const box=$('next-card');
+  const key=cfgVer+'|'+LI+'|'+keyOf(new Date(ts))+'|'+(nx.cur?nx.cur.st+nx.cur.name:'')+'|'+(nx.next?nx.next.st+nx.next.name:'');
+  if(box.dataset.key!==key){
+    box.dataset.key=key;box.textContent='';
+    if(!ttValid.length){
+      const p=document.createElement('p');p.className='nc-empty';p.append(t('noTimetable'));
+      const b=document.createElement('button');b.type='button';b.className='btn sm';b.textContent=t('addTimetable');
+      b.addEventListener('click',()=>{openSettings();$('f-class-box').scrollIntoView({block:'start'})});
+      p.appendChild(b);box.appendChild(p);
+    }else{
+      if(nx.cur)box.appendChild(ncItem('now',nx.cur,ts));
+      if(nx.next)box.appendChild(ncItem('next',nx.next,ts));
+      else{const p=document.createElement('p');p.className='nc-empty';p.textContent=t('noNext');box.appendChild(p)}
+    }
+  }
+  box.querySelectorAll('[data-cd]').forEach(el=>{
+    const left=hms((+el.dataset.cd-ts)/1000);
+    el.textContent=el.dataset.k==='now'?t('endsIn',{t:left}):t('startsIn',{t:left});
+  });
+}
+function weekStart(ts){const d=new Date(ts);d.setHours(0,0,0,0);d.setDate(d.getDate()-(d.getDay()+6)%7+wkOffset*7);return d}
+function renderWeek(ts){
+  const nx=findNext(ts);
+  renderNextCard(ts,nx);
+  const ws=weekStart(ts);
+  const key=cfgVer+'|'+LI+'|'+keyOf(ws)+'|'+Math.floor(ts/5000)+'|'+(nx.cur?nx.cur.st:'')+'|'+(nx.next?nx.next.st:'');
+  if(key===wkKey)return;wkKey=key;
+  const we=new Date(ws.getFullYear(),ws.getMonth(),ws.getDate()+6);
+  $('wk-range').textContent=fmtRange({from:keyOf(ws),to:keyOf(we)});
+  $('wk-today').hidden=wkOffset===0;
+  $('wk-note').hidden=!(isDay(cfg)&&ttValid.length);
+  const g=$('wk-grid');g.textContent='';g.hidden=!ttValid.length;
+  if(!ttValid.length)return;
+  const todayK=keyOf(new Date(ts)),r=model.rate,dh=df({weekday:'short'}),dn=df({month:'numeric',day:'numeric'});
+  for(let i=0;i<7;i++){
+    const d=new Date(ws.getFullYear(),ws.getMonth(),ws.getDate()+i),w=classesOn(d);
+    const col=document.createElement('div');col.className='wk-day'+(keyOf(d)===todayK?' today':'');
+    const h=document.createElement('div');h.className='wk-dh';
+    const hb=document.createElement('b');hb.textContent=dh.format(d);
+    const hs=document.createElement('span');hs.textContent=dn.format(d);h.append(hb,hs);
+    const items=document.createElement('div');items.className='wk-items';
+    if(!w.list.length){
+      const o=document.createElement('div');o.className='wk-off';
+      o.textContent=t(w.state==='hol'?'dayHoliday':w.state==='out'?'dayOutside':'dayNoClass');items.appendChild(o);
+    }
+    for(const x of w.list){
+      const el=document.createElement('div');let cls='wk-b',tag='';
+      if(ts>=x.en)cls+=' done';
+      else if(ts>=x.st){cls+=' now';tag=t('tagNow')}
+      else if(sameClass(nx.next,x)){cls+=' next';tag=t('tagNext')}
+      el.className=cls;
+      if(tag){const tg=document.createElement('span');tg.className='tag';tg.textContent=tag;el.appendChild(tg)}
+      const tm=document.createElement('span');tm.className='tm';tm.textContent=hm(x.st)+'–'+hm(x.en);
+      const nm=document.createElement('span');nm.className='nm';nm.textContent=x.name||t('c_item');
+      const pr=document.createElement('span');pr.className='pr';pr.textContent=money((x.en-x.st)/1000*r);
+      el.append(tm,nm,pr);items.appendChild(el);
+    }
+    col.append(h,items);g.appendChild(col);
+  }
+}
+$('wk-prev').addEventListener('click',()=>{wkOffset--;renderWeek(now())});
+$('wk-next').addEventListener('click',()=>{wkOffset++;renderWeek(now())});
+$('wk-today').addEventListener('click',()=>{wkOffset=0;renderWeek(now());$('wk-prev').focus()});
+
+/* ---------- share code ----------
+   "TM1." + base64url(deflate-raw(JSON)), or "TM0." + base64url(JSON) where the browser cannot compress.
+   It carries the school name, term dates, days off, timetable and school hours; never tuition. */
+function b64u(bytes){
+  let bin='';for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function unb64u(str){
+  str=str.replace(/-/g,'+').replace(/_/g,'/');while(str.length%4)str+='=';
+  const bin=atob(str),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;
+}
+async function pipeBytes(bytes,stream){return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer())}
+const dayStr=a=>DAYS.filter(d=>(a||[]).includes(d)).join('');
+const strDays=s=>DAYS.filter(d=>String(s||'').indexOf(String(d))>=0);
+function sharePayload(c){
+  return {v:1,n:c.school||'',s:c.start||'',e:c.end||'',
+    h:rangesOf(parseHolidays(c.holidays).set).map(r=>r.from===r.to?r.from:r.from+'~'+r.to),
+    c:(c.sessions||[]).map(x=>[x.name||'',x.start||'',x.end||'',dayStr(x.days)]),
+    t:[c.dayStart||'',c.dayEnd||'',dayStr(c.dayDays)]};
+}
+async function encodeShare(c){
+  const bytes=new TextEncoder().encode(JSON.stringify(sharePayload(c)));
+  if(typeof CompressionStream==='function'){try{return 'TM1.'+b64u(await pipeBytes(bytes,new CompressionStream('deflate-raw')))}catch(e){}}
+  return 'TM0.'+b64u(bytes);
+}
+async function decodeShare(text){
+  const m=/TM([01])\.([A-Za-z0-9_-]+)/.exec(String(text||'').replace(/\s+/g,'').slice(0,60000));
+  if(!m)throw new Error('format');
+  let bytes=unb64u(m[2]);
+  if(m[1]==='1'){
+    if(typeof DecompressionStream!=='function')throw new Error('inflate');
+    bytes=await pipeBytes(bytes,new DecompressionStream('deflate-raw'));
+  }
+  const o=JSON.parse(new TextDecoder().decode(bytes));
+  if(!o||o.v!==1)throw new Error('version');
+  const clock=v=>{const x=toMin(typeof v==='string'?v:'');return x!=null&&x<1440?fmtMin(x):''};
+  const s0=parseDate(o.s),e0=parseDate(o.e);
+  const tt=Array.isArray(o.t)?o.t:[];
+  return {
+    school:String(o.n||'').slice(0,60),
+    start:s0?keyOf(s0):'',end:e0?keyOf(e0):'',
+    holidays:rangesOf(parseHolidays((Array.isArray(o.h)?o.h:[]).slice(0,500).map(String).join('\n')).set).map(r=>r.from===r.to?r.from:r.from+'~'+r.to).join('\n'),
+    sessions:(Array.isArray(o.c)?o.c:[]).slice(0,60).filter(Array.isArray)
+      .map(r=>({name:String(r[0]||'').slice(0,30),start:clock(r[1]),end:clock(r[2]),days:strDays(r[3])}))
+      .filter(x=>x.days.length&&(x.name||x.start)),
+    dayStart:clock(tt[0]),dayEnd:clock(tt[1]),dayDays:strDays(tt[2])
+  };
+}
+let shareSeq=0,lastSharePayload='';
+function scheduleShare(){
+  if(!draft)return;
+  const p=JSON.stringify(sharePayload(draft));if(p===lastSharePayload)return;
+  lastSharePayload=p;const seq=++shareSeq;
+  const output=$('f-share-out'),copy=$('btn-share-copy');
+  output.value='';copy.disabled=true;
+  encodeShare(draft).then(code=>{
+    if(seq!==shareSeq)return;
+    output.value=code;copy.disabled=false;
+  }).catch(()=>{
+    if(seq===shareSeq)lastSharePayload='';
+  });
+}
+function setShareStatus(msg,err){const p=$('share-status');p.textContent=msg||'';p.hidden=!msg;p.className='imp-status'+(err?' err':'')}
+$('btn-share-copy').addEventListener('click',()=>{
+  const el=$('f-share-out'),code=el.value;if(!code)return;
+  const manual=()=>{el.focus();el.select();setShareStatus(t('shSelect'))};
+  try{navigator.clipboard.writeText(code).then(()=>{setShareStatus('');toast(t('shCopied'))},manual)}catch(e){manual()}
+});
+async function importShare(){
+  const raw=$('f-share-in').value.trim();
+  if(!raw){setShareStatus(t('shEmpty'),true);$('f-share-in').focus();return}
+  let got;
+  try{got=await decodeShare(raw)}catch(e){setShareStatus(t('shBad'),true);return}
+  readForm();
+  Object.assign(draft,got);
+  if(!draft.dayStart)draft.dayStart='08:00';
+  if(!draft.dayEnd)draft.dayEnd='17:30';
+  fillForm();
+  const label=got.school||(got.start&&got.end?fmtRange({from:got.start,to:got.end}):'—');
+  setShareStatus(t('shDone',{n:label,h:rangesOf(hset).length,c:got.sessions.length}));
+}
+$('btn-share-import').addEventListener('click',importShare);
+$('f-share-in').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();importShare()}});
+
+/* ---------- demo ---------- */
+$('btn-demo').addEventListener('click',()=>{
+  if(demo){offset=0;demo=false}
+  else{
+    const real=stateAt(Date.now());
+    const target=real.next||model.all[Math.floor(model.all.length/2)];
+    offset=target.st+(target.en-target.st)*0.38-Date.now();demo=true;
+  }
+  lastListKey='';lastKind='';render();
+});
+
+/* ---------- copy bill ---------- */
+let toastTimer;
+function toast(msg){const el=$('toast');el.textContent=msg;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.hidden=true,2600)}
+$('btn-copy').addEventListener('click',()=>{
+  const ts=now(),st=stateAt(ts),r=model.rate,day=isDay(cfg);let txt;
+  if(st.kind==='class'){
+    const el=(ts-st.cur.st)/1000,dur=(st.cur.en-st.cur.st)/1000;
+    txt=t(day?'cpDay':'cpClass',{a:money(el*r),b:money((dur-el)*r),s:money(r,rateDec(r)),m:money(r*60)});
+  }else if(st.next){
+    txt=t(day?'cpNextD':'cpNextC',{a:money((st.next.en-st.next.st)/1000*r),m:money(r*60),u:money(st.used,0)});
+  }else txt=t(day?'cpDoneD':'cpDoneC',{t:money(+cfg.tuition,0),hr:money(r*3600)});
+  txt+=t('cpTag');
+  const done=()=>toast(t('copied'));
+  try{navigator.clipboard.writeText(txt).then(done,()=>fallback(txt))}catch(e){fallback(txt)}
+});
+function fallback(txt){
+  const ta=document.createElement('textarea');ta.value=txt;ta.setAttribute('readonly','');
+  ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  let ok=false;try{ok=document.execCommand('copy')}catch(e){}
+  ta.remove();toast(ok?t('copied'):t('copyFail')+txt);
+}
+
+/* keep the screen on while the meter is open (if the browser allows) */
+async function wake(){try{if('wakeLock' in navigator&&document.visibilityState==='visible')await navigator.wakeLock.request('screen')}catch(e){}}
+document.addEventListener('visibilitychange',wake);document.addEventListener('click',wake,{once:true});wake();
+
+window.__tm={build,setTheme,setMode,setLang,parseICS,parseIcsTimetable,encodeShare,decodeShare,findNext:x=>findNext(x),rangesOf,I18N,stateAt:x=>stateAt(x),get model(){return model},get cfg(){return cfg}};
+applyI18n();renderStatic();render();setInterval(render,50);
+})();
+</script>
