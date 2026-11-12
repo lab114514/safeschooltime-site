@@ -313,6 +313,10 @@ details.manual textarea{margin:8px 0 4px}
         <option value="vertical" data-i18n="layoutVertical">竖版</option>
         <option value="horizontal" data-i18n="layoutHorizontal">横版</option>
       </select>
+      <select class="lang" id="billing-period" data-i18n-aria="periodAria" aria-label="计费周期">
+        <option value="term" data-i18n="periodTerm">按学期</option>
+        <option value="year" data-i18n="periodYear">按学年</option>
+      </select>
       <div class="seg" role="group" data-i18n-aria="modeAria" aria-label="计费方式">
         <button type="button" id="mode-class" aria-pressed="true" data-i18n="modeClass">按课表</button>
         <button type="button" id="mode-day" aria-pressed="false" data-i18n="modeDay">全天在校</button>
@@ -418,17 +422,18 @@ details.manual textarea{margin:8px 0 4px}
       <small data-i18n="shImportHint"></small>
       <p class="imp-status" id="share-status" aria-live="polite" hidden></p>
     </div>
-    <label class="field"><span data-i18n="fSchool">学校 / 学期名称</span><input class="in" id="f-school" maxlength="60"></label>
+    <label class="field"><span data-i18n="fSchool" data-i18n-year="fSchoolYear">学校 / 学期名称</span><input class="in" id="f-school" maxlength="60"></label>
     <div class="row3">
       <label class="field"><span data-i18n="fCurrency">货币符号</span><input class="in" id="f-currency" maxlength="4"></label>
-      <label class="field"><span data-i18n="fTuition">这段时间的总学费</span><input class="in num" id="f-tuition" type="number" min="0" step="any" inputmode="decimal"></label>
+      <label class="field"><span data-i18n="fTuition" data-i18n-year="fTuitionYear">这段时间的总学费</span><input class="in num" id="f-tuition" type="number" min="0" step="any" inputmode="decimal"></label>
     </div>
     <div class="row2">
-      <label class="field"><span data-i18n="fStart">开学日期</span><input class="in" id="f-start" type="date"></label>
-      <label class="field"><span data-i18n="fEnd">结课日期</span><input class="in" id="f-end" type="date"></label>
+      <label class="field"><span data-i18n="fStart" data-i18n-year="fStartYear">开学日期</span><input class="in" id="f-start" type="date"></label>
+      <label class="field"><span data-i18n="fEnd" data-i18n-year="fEndYear">结课日期</span><input class="in" id="f-end" type="date"></label>
     </div>
     <div class="field">
       <span data-i18n="fHol">放假 / 不上课的日子</span>
+      <small id="year-holidays-hint" data-i18n="yearHolidaysHint" hidden>寒暑假和其他停课日也可以标成不计费。</small>
       <small id="imp-hint"></small>
       <div class="imp">
         <button type="button" class="btn" id="btn-imp-img" data-i18n="impImg" hidden>上传校历图片，自动识别</button>
@@ -476,6 +481,7 @@ details.manual textarea{margin:8px 0 4px}
     <div class="field" id="f-class-box">
       <span data-i18n="fSessions">每周课表</span>
       <small id="f-sessions-hint"></small>
+      <small id="year-timetable-hint" data-i18n="yearTimetableHint" hidden>同一套每周课表适用于整个学年。</small>
       <div class="imp">
         <button type="button" class="btn" id="btn-tt-img" data-i18n="ttImg" hidden>上传课表图片，自动识别</button>
         <button type="button" class="btn" id="btn-tt-ics" data-i18n="ttIcs">导入 .ics 课表文件</button>
@@ -540,6 +546,9 @@ layoutVertical:['竖版','直式','Vertical','縦型','세로형'],
 layoutHorizontal:['横版','橫式','Horizontal','横型','가로형'],
 langAria:['语言','語言','Language','言語','언어'],
 modeAria:['计费方式','計費方式','Billing mode','課金方式','과금 방식'],
+periodAria:['计费周期','計費週期','Billing period','課金期間','과금 기간'],
+periodTerm:['按学期','按學期','By term','学期単位','학기 단위'],
+periodYear:['按学年','按學年','By school year','学年単位','학년 단위'],
 modeClass:['按课表','按課表','Classes only','授業のみ','수업만'],
 modeDay:['全天在校','全天在校','All day','終日','종일'],
 settingsBtn:['设置学费和课表','設定學費和課表','Set tuition & schedule','学費と時間割を設定','등록금·시간표 설정'],
@@ -594,6 +603,8 @@ d_copy:['复制今天的账单','複製今天的帳單',"Copy today's bill",'今
 backNow:['回到现在','回到現在','Back to now','現在に戻る','현재로 돌아가기'],
 stBefore:['学期未开始','學期未開始','Term not started','学期開始前','학기 시작 전'],
 stAfter:['学期已结束','學期已結束','Term ended','学期終了','학기 종료'],
+yearBefore:['学年未开始','學年未開始','School year not started','学年開始前','학년 시작 전'],
+yearAfter:['学年已结束','學年已結束','School year ended','学年終了','학년 종료'],
 allUsed:['已全部消耗','已全部消耗','All spent','すべて消費済み','전액 사용'],
 totalClassHours:['总课时','總課時','Total class time','総授業時間','총 수업 시간'],
 totalDayHours:['总在校时间','總在校時間','Total time at school','総在校時間','총 등교 시간'],
@@ -618,6 +629,7 @@ td4:['每秒 {a}，上课、课间、午休都在算。','每秒 {a}，上課、
 td5:['午休 1 小时 = {a}，睡得值不值？','午休 1 小時 = {a}，睡得值不值？','A 1-hour lunch break = {a}. Worth the nap?','昼休み1時間 = {a}。昼寝の価値はある？','점심시간 1시간 = {a}. 낮잠 잘 만한가요?'],
 td6:['今天在校一整天总价 {a}，够买 {n} 杯{item}。','今天在校一整天總價 {a}，夠買 {n} 杯{item}。','A full day at school costs {a}: {n} × {item}.','今日の在校は合計 {a}。{item} {n} 杯分。','오늘 하루 등교는 총 {a}. {item} {n}잔 값입니다.'],
 tb1:['学期还没开始，学费暂时不走。','學期還沒開始，學費暫時不走。','The term has not started, so the meter is paused.','学期はまだ始まっていません。課金は停止中。','학기가 아직 시작되지 않아 요금이 멈춰 있습니다.'],
+tbYear:['学年还没开始，暂不计费。','學年還沒開始，暫不計費。','Billing starts when the school year begins.','学年が始まるまで課金はありません。','학년이 시작되기 전에는 요금이 부과되지 않습니다.'],
 tb2:['开学后每秒 {a}，做好心理准备。','開學後每秒 {a}，做好心理準備。','Once it starts: {a} per second. Brace yourself.','始まったら毎秒 {a}。心の準備を。','개강하면 초당 {a}. 마음의 준비를 하세요.'],
 ta1:['这段学费已经全部花完了。','這段學費已經全部花完了。','All of this tuition has been spent.','この期間の学費はすべて使い切りました。','이 기간의 등록금을 모두 썼습니다.'],
 ta2c:['一共上了 {h} 小时课，每小时 {a}。','一共上了 {h} 小時課，每小時 {a}。','{h} hours of class in total, at {a} per hour.','授業は合計 {h} 時間、1時間あたり {a}。','수업은 총 {h}시간, 시간당 {a}.'],
@@ -656,10 +668,16 @@ mLocal:[' 数据只存在你自己的浏览器里。',' 資料只存在你自己
 sTitle:['学费和课表','學費和課表','Tuition & schedule','学費と時間割','등록금과 시간표'],
 close:['关闭','關閉','Close','閉じる','닫기'],
 fSchool:['学校 / 学期名称','學校 / 學期名稱','School / term name','学校・学期名','학교 / 학기 이름'],
+fSchoolYear:['学校 / 学年名称','學校 / 學年名稱','School / school year name','学校・学年名','학교 / 학년 이름'],
 fCurrency:['货币符号','貨幣符號','Currency','通貨記号','통화 기호'],
 fTuition:['这段时间的总学费','這段時間的總學費','Total tuition for this period','この期間の学費合計','이 기간의 총 등록금'],
 fStart:['开学日期','開學日期','First day','開始日','개강일'],
 fEnd:['结课日期','結課日期','Last day','終了日','종강일'],
+fTuitionYear:['整学年总学费','整學年總學費','Total tuition for the school year','学年全体の学費','학년 전체 등록금'],
+fStartYear:['学年开始日期','學年開始日期','First day of the school year','学年開始日','학년 시작일'],
+fEndYear:['学年结束日期','學年結束日期','Last day of the school year','学年終了日','학년 종료일'],
+yearHolidaysHint:['寒暑假和其他停课日也可以标成不计费。','寒暑假和其他停課日也可以標成不計費。','Mark school breaks and other days off to exclude them from billing.','長期休暇や休校日は、課金対象外の日として指定できます。','방학과 휴교일을 지정하면 요금 계산에서 제외됩니다.'],
+yearTimetableHint:['同一套每周课表适用于整个学年。','同一套每週課表適用於整個學年。','The same weekly timetable applies throughout the school year.','学年を通して同じ週間時間割が適用されます。','같은 주간 시간표가 학년 전체에 적용됩니다.'],
 fHol:['放假 / 不上课的日子','放假 / 不上課的日子','Holidays / days off','休み・授業のない日','휴일 / 수업 없는 날'],
 holHint:['这些天不计费。直接在日历上点选，或导入 .ics 日历文件。','這些天不計費。直接在行事曆上點選，或匯入 .ics 檔。','These days are not charged. Pick them on the calendar or import an .ics file.','これらの日は課金されません。カレンダーで選ぶか、.ics ファイルを読み込みます。','이 날들은 과금되지 않습니다. 달력에서 고르거나 .ics 파일을 가져오세요.'],
 holHintAI:['这些天不计费。可以上传校历图片自动识别（PDF 请先截图），也可以导入 .ics 文件，或直接在日历上点选。','這些天不計費。可以上傳校曆圖片自動辨識（PDF 請先截圖），也可以匯入 .ics 檔，或直接在行事曆上點選。','These days are not charged. Upload a picture of your school calendar (screenshot a PDF first), import an .ics file, or pick days on the calendar.','これらの日は課金されません。学年暦の画像をアップロード（PDF は先にスクリーンショット）、.ics の読み込み、カレンダーでの選択ができます。','이 날들은 과금되지 않습니다. 학사일정 이미지를 올리거나(PDF는 먼저 캡처), .ics 파일을 가져오거나, 달력에서 직접 고르세요.'],
@@ -756,11 +774,13 @@ endsIn:['还剩 {t}','還剩 {t}','{t} left','残り {t}','{t} 남음'],
 startsIn:['{t} 后开始','{t} 後開始','starts in {t}','{t} 後に開始','{t} 후 시작'],
 worth:['价值 {a}','價值 {a}','worth {a}','{a} 相当','{a} 상당'],
 noNext:['这学期没有更多课了。','這學期沒有更多課了。','No more classes this term.','この学期の授業はもうありません。','이번 학기에 남은 수업이 없습니다.'],
+noNextYear:['这学年没有更多课了。','這學年沒有更多課了。','No more classes this school year.','この学年の授業はもうありません。','이번 학년에 남은 수업이 없습니다.'],
 noTimetable:['还没有填课表，填好后这里会显示每周的课和下节课。','還沒有填課表，填好後這裡會顯示每週的課和下節課。','No timetable yet. Once you add one, your week and next class show up here.','時間割がまだありません。入力すると、週の授業と次の授業がここに表示されます。','시간표가 아직 없습니다. 입력하면 이번 주 수업과 다음 수업이 여기에 표시됩니다.'],
 addTimetable:['去填课表','去填課表','Add timetable','時間割を入力','시간표 입력'],
 dayHoliday:['放假','放假','Day off','休み','휴일'],
 dayNoClass:['没课','沒課','No class','授業なし','수업 없음'],
 dayOutside:['学期外','學期外','Outside term','学期外','학기 외'],
+dayOutsideYear:['学年外','學年外','Outside school year','学年期間外','학년 기간 외'],
 tagNow:['正在上','正在上','Now','授業中','진행 중'],
 tagNext:['下节','下節','Next','次','다음'],
 wkDayMode:['全天在校模式：课表只用来看课，计费仍按全天在校时间算。','全天在校模式：課表只用來看課，計費仍按全天在校時間算。','All-day mode: the timetable is for reference; billing still covers your whole day at school.','終日モード：時間割は確認用で、課金は在校時間全体のままです。','종일 모드: 시간표는 참고용이며 과금은 등교 시간 전체 기준입니다.'],
@@ -768,12 +788,12 @@ fSessionsHintDay:['全天模式下，课表只用来看每周的课和下节课�
 
 /* share code */
 shTitle:['共享码','共享碼','Share code','共有コード','공유 코드'],
-shHint:['把学校名称、学期日期、放假日期、课表和在校时间打包成一段码发给同学，对方导入后就不用再填一遍。学费不会包含在里面。','把學校名稱、學期日期、放假日期、課表和在校時間打包成一段碼傳給同學，對方匯入後就不用再填一遍。學費不會包含在裡面。','Bundle the school name, term dates, days off, timetable and school hours into one code for classmates, so they do not have to fill them in again. Tuition is not included.','学校名・学期の日付・休み・時間割・在校時間をひとつのコードにまとめてクラスメイトに送れます。相手は入力し直す必要がありません。学費は含まれません。','학교 이름, 학기 날짜, 휴일, 시간표, 등교 시간을 코드 하나로 묶어 친구에게 보낼 수 있습니다. 받은 사람은 다시 입력할 필요가 없습니다. 등록금은 포함되지 않습니다.'],
+shHint:['用共享码发给同学当前周期的校名、日期、假期、课表和在校时间。学费不包含在内。','用分享碼傳給同學目前週期的校名、日期、假期、課表和在校時間。學費不包含在內。','Share the current period’s school name, dates, days off, timetable and school hours. The code excludes tuition.','現在の期間の学校名・日付・休み・時間割・在校時間をコードで共有できます。学費は含まれません。','현재 기간의 학교 이름, 날짜, 휴일, 시간표, 재학 시간을 코드로 공유할 수 있습니다. 등록금은 포함되지 않습니다.'],
 shMine:['我的共享码','我的共享碼','My share code','自分の共有コード','내 공유 코드'],
 shCopy:['复制','複製','Copy','コピー','복사'],
 shPaste:['粘贴别人的共享码','貼上別人的共享碼',"Paste a classmate's share code",'受け取った共有コードを貼り付け','받은 공유 코드 붙여넣기'],
 shImport:['导入','匯入','Import','読み込む','가져오기'],
-shImportHint:['导入会替换学校名称、学期日期、放假日期、课表和在校时间，学费不变。','匯入會取代學校名稱、學期日期、放假日期、課表和在校時間，學費不變。','Importing replaces the school name, term dates, days off, timetable and school hours. Your tuition stays the same.','読み込むと学校名・学期の日付・休み・時間割・在校時間が置き換わります。学費は変わりません。','가져오면 학교 이름, 학기 날짜, 휴일, 시간표, 등교 시간이 바뀝니다. 등록금은 그대로입니다.'],
+shImportHint:['导入会替换当前计费周期的校名、日期、假期、课表和在校时间。学费不变。','匯入會取代目前計費週期的校名、日期、假期、課表和在校時間。學費不變。','Importing replaces these settings in the selected billing period. Your tuition stays the same.','選択中の課金期間の設定を読み込んだ内容で置き換えます。学費は変わりません。','선택한 과금 기간의 설정을 가져온 내용으로 바꿉니다. 등록금은 그대로입니다.'],
 shCopied:['共享码已复制，可以发给同学了','共享碼已複製，可以傳給同學了','Share code copied. Send it to your classmates.','共有コードをコピーしました。クラスメイトに送れます。','공유 코드를 복사했습니다. 친구에게 보내세요.'],
 shSelect:['没能自动复制，已选中共享码，请手动复制。','沒能自動複製，已選取共享碼，請手動複製。','Could not copy automatically. The code is selected; copy it by hand.','自動でコピーできませんでした。コードを選択したので手動でコピーしてください。','자동으로 복사하지 못했습니다. 코드를 선택해 두었으니 직접 복사하세요.'],
 shBad:['这段共享码读不出来，请确认复制完整。','這段共享碼讀不出來，請確認複製完整。','This share code could not be read. Make sure you copied all of it.','この共有コードは読み取れません。すべてコピーできているか確認してください。','이 공유 코드를 읽을 수 없습니다. 전부 복사했는지 확인하세요.'],
@@ -802,6 +822,7 @@ draftDiscard:['放弃这些修改','放棄這些修改','Discard them','変更�
 
 /* example data */
 exSchool:['示例大学 · 2026 秋季学期','範例大學 · 2026 秋季學期','Example University · Fall 2026','サンプル大学 · 2026年秋学期','예시대학교 · 2026 가을학기'],
+exYearSchool:['示例大学 · 2026–2027 学年','範例大學 · 2026–2027 學年','Example University · 2026–2027','サンプル大学 · 2026–2027年度','예시대학교 · 2026–2027학년도'],
 exAm:['上午的课','上午的課','Morning classes','午前の授業','오전 수업'],
 exPm:['下午的课','下午的課','Afternoon classes','午後の授業','오후 수업'],
 exItem:['奶茶','珍珠奶茶','bubble tea','タピオカ','버블티'],
@@ -809,6 +830,11 @@ mySchool:['我的学费','我的學費','My tuition','自分の学費','내 등�
 };
 
 const STORE='tuition-meter-v1',LANG_STORE='tuition-meter-lang',DRAFT_STORE='tuition-meter-draft';
+const PERIOD_STORE='tuition-meter-period';
+let period='term';
+try{if(localStorage.getItem(PERIOD_STORE)==='year')period='year'}catch(e){}
+const isYear=()=>period==='year';
+const periodStorageKey=key=>isYear()?key+'-year':key;
 const DAYS=[1,2,3,4,5,6,0]; // Monday first
 const $=id=>document.getElementById(id);
 const clone=o=>JSON.parse(JSON.stringify(o));
@@ -859,10 +885,11 @@ function whenLabel(ts,now){
 
 /* ---------- config ---------- */
 function defaultCfg(){
+  const year=isYear();
   return {
-    school:t('exSchool'),currency:'¥',tuition:26000,
-    start:'2026-09-07',end:'2027-01-15',
-    holidays:'2026-10-01~2026-10-07\n2027-01-01',
+    school:t(year?'exYearSchool':'exSchool'),currency:'¥',tuition:year?52000:26000,
+    start:'2026-09-07',end:year?'2027-06-30':'2027-01-15',
+    holidays:'2026-10-01~2026-10-07\n2027-01-01'+(year?'\n2027-01-16~2027-02-21':''),
     item:t('exItem'),itemPrice:18,
     sessions:[
       {name:t('exAm'),start:'08:30',end:'11:50',days:[1,2,3,4,5]},
@@ -882,8 +909,11 @@ function norm(c){
 }
 /* the example follows the page language; the owner's own data is never touched */
 function localizeExample(c){if(!c.example)return c;const d=defaultCfg();d.mode=c.mode;return d}
-function load(){try{const r=localStorage.getItem(STORE);if(r){const c=JSON.parse(r);if(c&&typeof c==='object')return norm(c);}}catch(e){}return null}
-function save(c){try{localStorage.setItem(STORE,JSON.stringify(c))}catch(e){}}
+function loadConfig(key){
+  try{const c=JSON.parse(localStorage.getItem(periodStorageKey(key)));if(c&&typeof c==='object')return norm(c)}catch(e){}
+  return null;
+}
+function save(c){try{localStorage.setItem(periodStorageKey(STORE),JSON.stringify(c))}catch(e){}}
 
 /* ---------- date helpers ---------- */
 const keyOf=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -907,7 +937,7 @@ function parseHolidays(txt){
   return {set,bad};
 }
 
-/* ---------- the model: every billed stretch in the term, with running seconds ----------
+/* ---------- the model: every billed stretch in the period, with running seconds ----------
    class mode bills each timetable row; day mode bills one stretch per school day (arrive → leave).
    Errors come back as I18N keys. */
 function build(c){
@@ -962,9 +992,12 @@ function stateAt(ts){
 }
 
 /* ---------- state ---------- */
-let cfg=localizeExample(load()||defaultCfg());
-let model=build(cfg);
-if(model.error){cfg=defaultCfg();model=build(cfg)}
+function loadPeriod(){
+  let next=localizeExample(loadConfig(STORE)||defaultCfg()),built=build(next);
+  if(built.error){next=defaultCfg();built=build(next)}
+  return {cfg:next,model:built};
+}
+let {cfg,model}=loadPeriod();
 let offset=0,demo=false;
 const now=()=>Date.now()+offset;
 
@@ -981,7 +1014,7 @@ function tickerLines(st,todayUsed){
     if(ip>0)L.splice(1,0,t(day?'td6':'tk6',{a:money(whole),n:cups(whole),item}));
     return L;
   }
-  if(st.kind==='before')return [t('tb1'),t('tb2',{a:money(r,rateDec(r))})];
+  if(st.kind==='before')return [t(isYear()?'tbYear':'tb1'),t('tb2',{a:money(r,rateDec(r))})];
   if(st.kind==='after')return [t('ta1'),t(day?'ta2d':'ta2c',{h:Math.round(model.total/3600),a:money(r*3600)})];
   const nxPrice=(st.next.en-st.next.st)/1000*r,p=day?'tbd':'tbc';
   const L=[t(p+'1'),t(p+'2',{a:money(nxPrice),b:money(r*600)}),t(p+'3',{a:money(+cfg.tuition-st.used)})];
@@ -995,7 +1028,8 @@ function render(){
   const ts=now(),st=stateAt(ts),r=model.rate,C=cfg.currency,D=liveDec(r);
 
   $('status-pill').dataset.k=st.kind;
-  $('status-text').textContent=demo?W('demoOn'):st.kind==='class'?W('on'):st.kind==='break'?W('off'):t(st.kind==='before'?'stBefore':'stAfter');
+  const periodStatus=st.kind==='before'?(isYear()?'yearBefore':'stBefore'):(isYear()?'yearAfter':'stAfter');
+  $('status-text').textContent=demo?W('demoOn'):st.kind==='class'?W('on'):st.kind==='break'?W('off'):t(periodStatus);
   $('btn-demo').hidden=st.kind==='class'&&!demo;
   $('btn-demo').textContent=demo?t('backNow'):W('demo');
 
@@ -1101,6 +1135,7 @@ function renderStatic(){
   const r=model.rate,day=isDay(cfg);
   $('school-name').textContent=cfg.school||t('mySchool');
   $('example-note').hidden=!cfg.example;
+  $('billing-period').value=period;
   $('mode-class').setAttribute('aria-pressed',String(!day));
   $('mode-day').setAttribute('aria-pressed',String(day));
   $('mode-desc').textContent=W('desc');
@@ -1118,10 +1153,15 @@ function renderStatic(){
 function applyI18n(){
   document.documentElement.lang=LOCALES[LI];
   document.title=t('title');
-  document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n)});
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const {i18n,i18nYear}=el.dataset;
+    el.textContent=t(isYear()&&i18nYear?i18nYear:i18n);
+  });
   document.querySelectorAll('[data-i18n-aria]').forEach(el=>{el.setAttribute('aria-label',t(el.dataset.i18nAria))});
   document.querySelectorAll('[data-i18n-ph]').forEach(el=>{el.placeholder=t(el.dataset.i18nPh)});
   $('imp-hint').textContent=t(sampleFn?'holHintAI':'holHint');
+  $('year-holidays-hint').hidden=!isYear();
+  $('year-timetable-hint').hidden=!isYear();
   $('lang').value=String(LI);
   if(draft)modeUI();
 }
@@ -1161,7 +1201,18 @@ layoutMenu.addEventListener('change',()=>{
 wideLayout.addEventListener('change',applyDesktopLayout);
 applyDesktopLayout();
 
-/* ---------- switching mode from the main page ---------- */
+/* ---------- switching period or billing mode from the main page ---------- */
+function setPeriod(next){
+  if(next===period||(next!=='term'&&next!=='year'))return;
+  if(!$('drawer').hidden)closeSettings();
+  period=next;
+  try{localStorage.setItem(PERIOD_STORE,period)}catch(e){}
+  ({cfg,model}=loadPeriod());
+  draft=null;offset=0;demo=false;wkOffset=0;
+  applyI18n();renderStatic();render();
+}
+$('billing-period').addEventListener('change',e=>setPeriod(e.target.value));
+
 function setMode(m){
   if(cfg.mode===m)return;
   const next=Object.assign(clone(cfg),{mode:m}),mod=build(next);
@@ -1173,16 +1224,17 @@ $('mode-day').addEventListener('click',()=>setMode('day'));
 
 /* ---------- settings ---------- */
 let draft=null;
+const draftIsOpen=target=>target&&draft===target&&!$('drawer').hidden;
 /* Saved settings always come back when the panel opens. Edits that were NOT saved are kept too
    (in this browser), so closing the panel or reloading mid-edit does not lose them: the panel
    reopens where the person left off, with a way to throw those edits away. */
-function loadDraft(){try{const r=localStorage.getItem(DRAFT_STORE);if(r){const c=JSON.parse(r);if(c&&typeof c==='object')return norm(c)}}catch(e){}return null}
-function clearDraft(){try{localStorage.removeItem(DRAFT_STORE)}catch(e){}}
+function clearDraft(){try{localStorage.removeItem(periodStorageKey(DRAFT_STORE))}catch(e){}}
 function persistDraft(){
   if(!draft)return;
   try{
-    if(JSON.stringify(draft)===JSON.stringify(norm(clone(cfg))))localStorage.removeItem(DRAFT_STORE);
-    else localStorage.setItem(DRAFT_STORE,JSON.stringify(draft));
+    const key=periodStorageKey(DRAFT_STORE);
+    if(JSON.stringify(draft)===JSON.stringify(norm(clone(cfg))))localStorage.removeItem(key);
+    else localStorage.setItem(key,JSON.stringify(draft));
   }catch(e){}
 }
 function dayBoxes(prefix,suffix,checked){ // seven weekday toggles, Monday first
@@ -1224,7 +1276,7 @@ function modeUI(){
   $('f-sessions-hint').textContent=t(day?'fSessionsHintDay':'fSessionsHint');
 }
 function openSettings(mode){
-  const kept=loadDraft();
+  const kept=loadConfig(DRAFT_STORE);
   draft=kept||norm(clone(cfg));
   if(mode==='class'||mode==='day')draft.mode=mode;
   $('draft-note').hidden=!kept;
@@ -1274,6 +1326,7 @@ function preview(){
   $('btn-save').disabled=false;
 }
 function onFormChange(e){
+  if(!draftIsOpen(draft))return;
   readForm();
   if(e&&e.target&&e.target.id==='f-holidays'){hset=parseHolidays(draft.holidays).set;renderChips()}
   renderCal();preview();
@@ -1474,12 +1527,14 @@ $('btn-imp-cancel').addEventListener('click',resetImport);
 $('btn-imp-ics').addEventListener('click',()=>$('f-imp-ics').click());
 $('f-imp-ics').addEventListener('change',async e=>{
   const file=e.target.files&&e.target.files[0];e.target.value='';if(!file)return;
+  const target=draft;
   resetImport();
   try{
     const items=parseICS(await file.text());
+    if(!draftIsOpen(target))return;
     if(!items.length){setStatus(t('icsNone'),true);return}
     showReview(items,null,t('rvIcs'));
-  }catch(err){setStatus(t('icsBad'),true)}
+  }catch(err){if(draftIsOpen(target))setStatus(t('icsBad'),true)}
 });
 
 const IMG_GONE=['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed','images_unavailable'];
@@ -1490,7 +1545,8 @@ function importErr(code){
 async function importImage(file){
   if(!sampleFn)return;
   resetImport();
-  impCtl=new AbortController();
+  const target=draft,controller=new AbortController();
+  impCtl=controller;
   setStatus(t('stWorking'));
   $('btn-imp-stop').hidden=false;$('btn-imp-img').disabled=true;
   const prompt=[
@@ -1506,7 +1562,8 @@ async function importImage(file){
     'If the image is not an academic calendar or cannot be read, return an empty holidays array and explain in the note.'
   ].join('\n');
   try{
-    const data=await sampleFn.json(prompt,{images:[file],signal:impCtl.signal});
+    const data=await sampleFn.json(prompt,{images:[file],signal:controller.signal});
+    if(!draftIsOpen(target)||controller.signal.aborted)return;
     const items=cleanItems(data&&data.holidays);
     const s0=data&&parseDate(data.termStart),e0=data&&parseDate(data.termEnd);
     const term=s0&&e0&&e0>s0&&(e0-s0)/864e5<=4000?{start:keyOf(s0),end:keyOf(e0)}:null;
@@ -1514,11 +1571,14 @@ async function importImage(file){
     if(!items.length&&!term)setStatus(t('imgNone')+(note?' '+t('impNote',{n:note}):''),true);
     else{showReview(items,term,t('rvImg'));setStatus(note?t('impNote',{n:note}):'')}
   }catch(err){
+    if(!draftIsOpen(target))return;
     const code=err&&err.code;
     setStatus(importErr(code),code!=='cancelled');
     if(IMG_GONE.includes(code))imgGone();
   }finally{
-    $('btn-imp-stop').hidden=true;$('btn-imp-img').disabled=false;impCtl=null;
+    if(impCtl===controller){
+      $('btn-imp-stop').hidden=true;$('btn-imp-img').disabled=false;impCtl=null;
+    }
   }
 }
 $('btn-imp-img').addEventListener('click',()=>$('f-imp-img').click());
@@ -1629,17 +1689,20 @@ $('btn-tt-cancel').addEventListener('click',resetTt);
 $('btn-tt-ics').addEventListener('click',()=>$('f-tt-ics').click());
 $('f-tt-ics').addEventListener('change',async e=>{
   const file=e.target.files&&e.target.files[0];e.target.value='';if(!file)return;
+  const target=draft;
   resetTt();
   try{
     const items=parseIcsTimetable(await file.text());
+    if(!draftIsOpen(target))return;
     if(!items.length){setTtStatus(t('ttIcsNone'),true);return}
     showTtReview(items,t('rvTtIcs'));
-  }catch(err){setTtStatus(t('icsBad'),true)}
+  }catch(err){if(draftIsOpen(target))setTtStatus(t('icsBad'),true)}
 });
 async function importTimetableImage(file){
   if(!sampleFn)return;
   resetTt();
-  ttCtl=new AbortController();
+  const target=draft,controller=new AbortController();
+  ttCtl=controller;
   setTtStatus(t('ttWorking'));
   $('btn-tt-stop').hidden=false;$('btn-tt-img').disabled=true;
   const prompt=[
@@ -1656,17 +1719,21 @@ async function importTimetableImage(file){
     'If the image is not a timetable or cannot be read, return an empty sessions array and explain in the note.'
   ].join('\n');
   try{
-    const data=await sampleFn.json(prompt,{images:[file],signal:ttCtl.signal});
+    const data=await sampleFn.json(prompt,{images:[file],signal:controller.signal});
+    if(!draftIsOpen(target)||controller.signal.aborted)return;
     const items=cleanSessions(data&&data.sessions);
     const note=data&&typeof data.note==='string'?data.note.trim().slice(0,240):'';
     if(!items.length)setTtStatus(t('ttImgNone')+(note?' '+t('impNote',{n:note}):''),true);
     else{showTtReview(items,t('rvTtImg'));ttNote=note;setTtStatus(note?t('impNote',{n:note}):'')}
   }catch(err){
+    if(!draftIsOpen(target))return;
     const code=err&&err.code;
     setTtStatus(importErr(code),code!=='cancelled');
     if(IMG_GONE.includes(code))imgGone();
   }finally{
-    $('btn-tt-stop').hidden=true;$('btn-tt-img').disabled=false;ttCtl=null;
+    if(ttCtl===controller){
+      $('btn-tt-stop').hidden=true;$('btn-tt-img').disabled=false;ttCtl=null;
+    }
   }
 }
 $('btn-tt-img').addEventListener('click',()=>$('f-tt-img').click());
@@ -1732,7 +1799,7 @@ function renderNextCard(ts,nx){
     }else{
       if(nx.cur)box.appendChild(ncItem('now',nx.cur,ts));
       if(nx.next)box.appendChild(ncItem('next',nx.next,ts));
-      else{const p=document.createElement('p');p.className='nc-empty';p.textContent=t('noNext');box.appendChild(p)}
+      else{const p=document.createElement('p');p.className='nc-empty';p.textContent=t(isYear()?'noNextYear':'noNext');box.appendChild(p)}
     }
   }
   box.querySelectorAll('[data-cd]').forEach(el=>{
@@ -1763,7 +1830,8 @@ function renderWeek(ts){
     const items=document.createElement('div');items.className='wk-items';
     if(!w.list.length){
       const o=document.createElement('div');o.className='wk-off';
-      o.textContent=t(w.state==='hol'?'dayHoliday':w.state==='out'?'dayOutside':'dayNoClass');items.appendChild(o);
+      const outside=isYear()?'dayOutsideYear':'dayOutside';
+      o.textContent=t(w.state==='hol'?'dayHoliday':w.state==='out'?outside:'dayNoClass');items.appendChild(o);
     }
     for(const x of w.list){
       const el=document.createElement('div');let cls='wk-b',tag='';
@@ -1786,7 +1854,7 @@ $('wk-today').addEventListener('click',()=>{wkOffset=0;renderWeek(now());$('wk-p
 
 /* ---------- share code ----------
    "TM1." + base64url(deflate-raw(JSON)), or "TM0." + base64url(JSON) where the browser cannot compress.
-   It carries the school name, term dates, days off, timetable and school hours; never tuition. */
+   It carries the school name, period dates, days off, timetable and school hours; never tuition. */
 function b64u(bytes){
   let bin='';for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
   return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -1864,8 +1932,10 @@ $('btn-share-copy').addEventListener('click',()=>{
 async function importShare(){
   const raw=$('f-share-in').value.trim();
   if(!raw){setShareStatus(t('shEmpty'),true);$('f-share-in').focus();return}
+  const target=draft;
   let got;
-  try{got=await decodeShare(raw)}catch(e){setShareStatus(t('shBad'),true);return}
+  try{got=await decodeShare(raw)}catch(e){if(draftIsOpen(target))setShareStatus(t('shBad'),true);return}
+  if(!draftIsOpen(target))return;
   readForm();
   Object.assign(draft,got);
   if(!draft.dayStart)draft.dayStart='08:00';
