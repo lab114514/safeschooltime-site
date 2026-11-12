@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>学费计价器</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,6 +45,7 @@
 :root:lang(en){--cjk:system-ui}
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{min-height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.55}
 .num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
@@ -243,7 +249,8 @@ details.manual textarea{margin:8px 0 4px}
 }
 </style>
 <script>try{var tmTheme=localStorage.getItem('tuition-meter-theme');if(tmTheme==='dark'||tmTheme==='auto')document.documentElement.setAttribute('data-tm-theme',tmTheme)}catch(e){}</script>
-
+</head>
+<body>
 <div class="wrap">
   <header class="top">
     <div>
@@ -1733,7 +1740,16 @@ async function encodeShare(c){
   return 'TM0.'+b64u(bytes);
 }
 async function decodeShare(text){
-  const m=/TM([01])\.([A-Za-z0-9_-]+)/.exec(String(text||'').replace(/\s+/g,'').slice(0,60000));
+  const input=String(text||'').slice(0,60000);
+  const pattern=/TM([01])\.([A-Za-z0-9_-]+)/;
+  const intact=pattern.exec(input);
+  const compact=pattern.exec(input.replace(/\s+/g,''));
+  if(intact&&compact&&intact[0]!==compact[0]){
+    try{return await decodeShareToken(intact)}catch(e){}
+  }
+  return decodeShareToken(compact);
+}
+async function decodeShareToken(m){
   if(!m)throw new Error('format');
   let bytes=unb64u(m[2]);
   if(m[1]==='1'){
@@ -1832,3 +1848,5 @@ window.__tm={build,setTheme,setMode,setLang,parseICS,parseIcsTimetable,encodeSha
 applyI18n();renderStatic();render();setInterval(render,50);
 })();
 </script>
+</body>
+</html>
