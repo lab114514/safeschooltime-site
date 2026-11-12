@@ -61,6 +61,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 h1{margin:2px 0 0;font-size:clamp(20px,3.4vw,26px);font-weight:700;letter-spacing:.01em;text-wrap:balance}
 .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .lang{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px}
+.desktop-layout{display:none}
 .pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--surface)}
 .pill i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
 .pill[data-k="class"]{color:var(--burn);border-color:color-mix(in srgb,var(--burn) 40%,var(--line))}
@@ -230,42 +231,41 @@ details.manual textarea{margin:8px 0 4px}
 .share-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
 .in.code{font-family:var(--font-num);font-size:13px;background:var(--surface)}
 
-@media (min-width:1100px){
-  .wrap{
-    max-width:none;
-    padding-block-start:24px;
-    padding-left:max(clamp(20px,1.6vw,36px),env(safe-area-inset-left,0px));
-    padding-right:max(clamp(20px,1.6vw,36px),env(safe-area-inset-right,0px));
-    gap:16px;
-  }
+@media (min-width:1100px) and (hover:hover) and (pointer:fine){
+  .desktop-layout{display:block}
+  .wrap{max-width:clamp(1000px,86vw,1280px);padding-block-start:24px;gap:16px}
   .meter{padding:24px 30px;gap:16px}
   .amount-num{font-size:clamp(52px,4.3vw,62px)}
   .stats3{padding-top:14px}
   .bar{height:10px}
   .tile{padding-block:12px}
   .week{padding-block:16px;gap:12px}
-}
-@media (min-width:1200px){
-  .dashboard{
+
+  .horizontal-layout .wrap{
+    max-width:none;
+    padding-left:max(clamp(20px,1.6vw,36px),env(safe-area-inset-left,0px));
+    padding-right:max(clamp(20px,1.6vw,36px),env(safe-area-inset-right,0px));
+  }
+  .horizontal-layout .dashboard{
     display:grid;
     grid-template:"overview timetable" auto "today timetable" minmax(0,1fr) / minmax(0,2fr) minmax(0,3fr);
     column-gap:20px;
     align-items:start;
   }
-  .overview{grid-area:overview}
-  .dashboard>.week{grid-area:timetable;padding-inline:clamp(14px,1.35vw,24px)}
-  .dashboard>.today{grid-area:today}
-  .meter{padding-inline:24px}
-  .class-name{overflow-wrap:anywhere}
-  .meter-main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-  .amount-num{font-size:clamp(38px,3.1vw,56px);line-height:1.05}
-  .totals{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .wk-grid{display:flex}
-  .wk-day{flex:1 1 0}
-  .wk-day:not(:has(.wk-b)){flex:.55 1 0;min-width:52px}
-  .wk-dh{flex-wrap:wrap;gap:2px 6px}
-  .wk-b{padding-inline:clamp(6px,.5vw,8px)}
-  .wk-b .nm{font-size:clamp(12px,.875vw,13.5px)}
+  .horizontal-layout .overview{grid-area:overview}
+  .horizontal-layout .dashboard>.week{grid-area:timetable;padding-inline:clamp(14px,1.35vw,24px)}
+  .horizontal-layout .dashboard>.today{grid-area:today}
+  .horizontal-layout .meter{padding-inline:24px}
+  .horizontal-layout .class-name{overflow-wrap:anywhere}
+  .horizontal-layout .meter-main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  .horizontal-layout .amount-num{font-size:clamp(38px,3.1vw,56px);line-height:1.05}
+  .horizontal-layout .totals{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .horizontal-layout .wk-grid{display:flex}
+  .horizontal-layout .wk-day{flex:1 1 0}
+  .horizontal-layout .wk-day:not(:has(.wk-b)){flex:.55 1 0;min-width:52px}
+  .horizontal-layout .wk-dh{flex-wrap:wrap;gap:2px 6px}
+  .horizontal-layout .wk-b{padding-inline:clamp(6px,.5vw,8px)}
+  .horizontal-layout .wk-b .nm{font-size:clamp(12px,.875vw,13.5px)}
 }
 @media (max-width:720px){
   .wk-grid{grid-template-columns:1fr;gap:6px}
@@ -307,6 +307,11 @@ details.manual textarea{margin:8px 0 4px}
         <option value="light" data-i18n="thLight">浅色</option>
         <option value="dark" data-i18n="thDark">黑色</option>
         <option value="auto" data-i18n="thAuto">跟随系统</option>
+      </select>
+      <select class="lang desktop-layout" id="desktop-layout" data-i18n-aria="layoutAria" aria-label="电脑布局">
+        <option value="auto" data-i18n="layoutAuto">自动布局</option>
+        <option value="vertical" data-i18n="layoutVertical">竖版</option>
+        <option value="horizontal" data-i18n="layoutHorizontal">横版</option>
       </select>
       <div class="seg" role="group" data-i18n-aria="modeAria" aria-label="计费方式">
         <button type="button" id="mode-class" aria-pressed="true" data-i18n="modeClass">按课表</button>
@@ -529,6 +534,10 @@ themeAria:['外观','外觀','Appearance','外観','화면 모드'],
 thLight:['浅色','淺色','Light','ライト','라이트'],
 thDark:['黑色','黑色','Dark','ダーク','다크'],
 thAuto:['跟随系统','跟隨系統','Match system','システムに合わせる','시스템 설정 따르기'],
+layoutAria:['电脑布局','電腦版面','Desktop layout','デスクトップのレイアウト','데스크톱 레이아웃'],
+layoutAuto:['自动布局','自動版面','Auto layout','自動レイアウト','자동 레이아웃'],
+layoutVertical:['竖版','直式','Vertical','縦型','세로형'],
+layoutHorizontal:['横版','橫式','Horizontal','横型','가로형'],
 langAria:['语言','語言','Language','言語','언어'],
 modeAria:['计费方式','計費方式','Billing mode','課金方式','과금 방식'],
 modeClass:['按课表','按課表','Classes only','授業のみ','수업만'],
@@ -1132,6 +1141,25 @@ function setTheme(v){
 }
 $('theme').value=document.documentElement.getAttribute('data-tm-theme')||'light';
 $('theme').addEventListener('change',e=>setTheme(e.target.value));
+
+const layoutMenu=$('desktop-layout'),wideLayout=window.matchMedia('(min-width:1200px)');
+const LAYOUT_STORE='tuition-meter-layout';
+layoutMenu.value='auto';
+try{
+  const saved=localStorage.getItem(LAYOUT_STORE);
+  if(saved==='vertical'||saved==='horizontal')layoutMenu.value=saved;
+}catch(e){}
+function applyDesktopLayout(){
+  const preference=layoutMenu.value;
+  document.documentElement.classList.toggle('horizontal-layout',
+    preference==='horizontal'||(preference==='auto'&&wideLayout.matches));
+}
+layoutMenu.addEventListener('change',()=>{
+  applyDesktopLayout();
+  try{localStorage.setItem(LAYOUT_STORE,layoutMenu.value)}catch(e){}
+});
+wideLayout.addEventListener('change',applyDesktopLayout);
+applyDesktopLayout();
 
 /* ---------- switching mode from the main page ---------- */
 function setMode(m){
