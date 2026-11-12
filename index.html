@@ -328,7 +328,7 @@ details.manual textarea{margin:8px 0 4px}
     </div>
   </header>
 
-  <p class="note" id="example-note" hidden><span data-i18n="exNote">现在显示的是示例数据。</span> <button type="button" id="btn-settings-2" data-i18n="exNoteBtn">填入你自己的学费和课表</button><span data-i18n="exNoteOr">，也可以</span> <button type="button" id="btn-share-2" data-i18n="exNoteShare">粘贴同学的共享码</button></p>
+  <p class="note" id="example-note" hidden><span data-i18n="exNote">现在显示的是示例数据。</span> <button type="button" id="btn-settings-2" data-i18n="exNoteBtn">填入你自己的学费和课表</button><span data-i18n="exNoteOr">，也可以</span> <button type="button" id="btn-share-2" data-i18n="exNoteShare">导入同学的分享</button></p>
 
   <main class="dashboard">
     <div class="overview">
@@ -410,11 +410,11 @@ details.manual textarea{margin:8px 0 4px}
     </div>
     <p class="note" id="draft-note" hidden><span data-i18n="draftNote">已恢复上次没保存的修改，可以接着改。</span> <button type="button" id="btn-draft-discard" data-i18n="draftDiscard">放弃这些修改</button></p>
     <div class="sharebox" id="f-share">
-      <span data-i18n="shTitle">共享码</span>
+      <span data-i18n="shTitle">分享课表</span>
       <small data-i18n="shHint"></small>
       <div class="share-row">
-        <input class="in code" id="f-share-out" readonly data-i18n-aria="shMine" aria-label="我的共享码">
-        <button type="button" class="btn" id="btn-share-copy" data-i18n="shCopy" disabled>复制</button>
+        <input class="in code" id="f-share-out" readonly data-i18n-aria="shMine" aria-label="我的分享链接">
+        <button type="button" class="btn" id="btn-share-copy" data-i18n="shCopy" disabled>复制链接</button>
       </div>
       <div class="share-row">
         <input class="in code" id="f-share-in" autocomplete="off" spellcheck="false" data-i18n-ph="shPaste" data-i18n-aria="shPaste">
@@ -796,20 +796,21 @@ wkDayMode:['全天在校模式：课表只用来看课，计费仍按全天在�
 fSessionsHintDay:['全天模式下，课表只用来看每周的课和下节课，不影响计费。','全天模式下，課表只用來看每週的課和下節課，不影響計費。','In all-day mode the timetable only shows your week and next class; it does not change billing.','終日モードでは、時間割は週の授業と次の授業の表示だけに使われ、課金には影響しません。','종일 모드에서 시간표는 주간 수업과 다음 수업 표시에만 쓰이며 과금에는 영향을 주지 않습니다.'],
 
 /* share code */
-shTitle:['共享码','共享碼','Share code','共有コード','공유 코드'],
-shHint:['用共享码发给同学当前周期的校名、日期、假期、课表和在校时间。学费不包含在内。','用分享碼傳給同學目前週期的校名、日期、假期、課表和在校時間。學費不包含在內。','Share the current period’s school name, dates, days off, timetable and school hours. The code excludes tuition.','現在の期間の学校名・日付・休み・時間割・在校時間をコードで共有できます。学費は含まれません。','현재 기간의 학교 이름, 날짜, 휴일, 시간표, 재학 시간을 코드로 공유할 수 있습니다. 등록금은 포함되지 않습니다.'],
-shMine:['我的共享码','我的共享碼','My share code','自分の共有コード','내 공유 코드'],
-shCopy:['复制','複製','Copy','コピー','복사'],
-shPaste:['粘贴别人的共享码','貼上別人的共享碼',"Paste a classmate's share code",'受け取った共有コードを貼り付け','받은 공유 코드 붙여넣기'],
+shTitle:["分享课表","分享課表","Share timetable","時間割の共有","시간표 공유"],
+shHint:["链接包含当前周期的校名、日期、假期、课表和在校时间。学费不包含在内。","連結包含目前週期的校名、日期、假期、課表和在校時間。學費不包含在內。","The link includes the current period’s school name, dates, days off, timetable and school hours. It excludes tuition.","リンクには現在の期間の学校名・日付・休み・時間割・在校時間が含まれます。学費は含まれません。","링크에는 현재 기간의 학교 이름, 날짜, 휴일, 시간표, 재학 시간이 포함됩니다. 등록금은 포함되지 않습니다."],
+shMine:["我的分享链接","我的分享連結","My share link","自分の共有リンク","내 공유 링크"],
+shCopy:["复制链接","複製連結","Copy link","リンクをコピー","링크 복사"],
+shPaste:["粘贴分享链接或共享码","貼上分享連結或共享碼","Paste a share link or code","共有リンクまたはコードを貼り付け","공유 링크 또는 코드 붙여넣기"],
 shImport:['导入','匯入','Import','読み込む','가져오기'],
 shImportHint:['导入会替换当前计费周期的校名、日期、假期、课表和在校时间。学费不变。','匯入會取代目前計費週期的校名、日期、假期、課表和在校時間。學費不變。','Importing replaces these settings in the selected billing period. Your tuition stays the same.','選択中の課金期間の設定を読み込んだ内容で置き換えます。学費は変わりません。','선택한 과금 기간의 설정을 가져온 내용으로 바꿉니다. 등록금은 그대로입니다.'],
-shCopied:['共享码已复制，可以发给同学了','共享碼已複製，可以傳給同學了','Share code copied. Send it to your classmates.','共有コードをコピーしました。クラスメイトに送れます。','공유 코드를 복사했습니다. 친구에게 보내세요.'],
-shSelect:['没能自动复制，已选中共享码，请手动复制。','沒能自動複製，已選取共享碼，請手動複製。','Could not copy automatically. The code is selected; copy it by hand.','自動でコピーできませんでした。コードを選択したので手動でコピーしてください。','자동으로 복사하지 못했습니다. 코드를 선택해 두었으니 직접 복사하세요.'],
-shBad:['这段共享码读不出来，请确认复制完整。','這段共享碼讀不出來，請確認複製完整。','This share code could not be read. Make sure you copied all of it.','この共有コードは読み取れません。すべてコピーできているか確認してください。','이 공유 코드를 읽을 수 없습니다. 전부 복사했는지 확인하세요.'],
-shEmpty:['先粘贴一段共享码。','先貼上一段共享碼。','Paste a share code first.','先に共有コードを貼り付けてください。','먼저 공유 코드를 붙여넣으세요.'],
+shCopied:["分享链接已复制","分享連結已複製","Share link copied","共有リンクをコピーしました","공유 링크를 복사했습니다"],
+shSelect:["链接已选中，可以手动复制。","連結已選取，可以手動複製。","The link is selected for manual copying.","選択されたリンクを手動でコピーできます。","선택된 링크를 직접 복사할 수 있습니다."],
+shBad:["读不到分享内容，请确认链接或共享码完整。","無法讀取分享內容，請確認連結或共享碼完整。","The share could not be read. Check that the link or code is complete.","共有内容を読み取れません。リンクまたはコードが完全か確認してください。","공유 내용을 읽을 수 없습니다. 링크 또는 코드가 완전한지 확인하세요."],
+shEmpty:["先粘贴分享链接或共享码。","先貼上分享連結或共享碼。","Paste a share link or code first.","先に共有リンクまたはコードを貼り付けてください。","먼저 공유 링크 또는 코드를 붙여넣으세요."],
+shLinkReady:["点「导入」查看分享的课表，再保存设置。","點「匯入」查看分享的課表，再儲存設定。","Select Import to review the shared timetable before saving.","「読み込む」で共有された時間割を確認し、設定を保存できます。","가져오기를 눌러 공유된 시간표를 확인한 뒤 저장하세요."],
 shDone:['已导入“{n}”：{h} 段放假，{c} 段上课时间。学费没有改，核对后点保存。','已匯入「{n}」：{h} 段放假，{c} 段上課時間。學費沒有改，核對後點儲存。','Imported "{n}": {h} day-off period(s) and {c} class block(s). Your tuition is unchanged. Check everything, then save.','「{n}」を読み込みました。休み {h} 件、授業時間帯 {c} 件。学費は変わっていません。確認してから保存してください。','"{n}" 가져오기 완료: 휴일 {h}건, 수업 구간 {c}개. 등록금은 그대로입니다. 확인한 뒤 저장하세요.'],
 exNoteOr:['，也可以','，也可以',', or','、または',', 또는'],
-exNoteShare:['粘贴同学的共享码','貼上同學的共享碼',"paste a classmate's share code",'クラスメイトの共有コードを貼り付ける','친구의 공유 코드 붙여넣기'],
+exNoteShare:["导入同学的分享","匯入同學的分享","import a shared timetable","共有された時間割を読み込む","공유된 시간표 가져오기"],
 
 /* timetable import */
 ttImg:['上传课表图片，自动识别','上傳課表圖片，自動辨識','Upload a timetable image','時間割の画像を読み取る','시간표 이미지 인식'],
@@ -1894,9 +1895,12 @@ $('wk-prev').addEventListener('click',()=>{wkOffset--;renderWeek(now())});
 $('wk-next').addEventListener('click',()=>{wkOffset++;renderWeek(now())});
 $('wk-today').addEventListener('click',()=>{wkOffset=0;renderWeek(now());$('wk-prev').focus()});
 
-/* ---------- share code ----------
-   "TM1." + base64url(deflate-raw(JSON)), or "TM0." + base64url(JSON) where the browser cannot compress.
-   It carries the school name, period dates, days off, timetable and school hours; never tuition. */
+/* ---------- timetable sharing ----------
+   TM0/TM1 are the original JSON codes. TM2/TM3 use packed bytes.
+   TM1 and TM3 are deflated. Links put the period and code in the URL fragment. */
+const SHARE_URL='https://safeschooltime.xyz/';
+const SHARE_HASH=/^#([ty])TM[0-3]\.[A-Za-z0-9_-]+$/;
+const SHARE_EMPTY=65535,SHARE_DAY_MS=864e5;
 function b64u(bytes){
   let bin='';for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
   return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -1914,14 +1918,83 @@ function sharePayload(c){
     c:(c.sessions||[]).map(x=>[x.name||'',x.start||'',x.end||'',dayStr(x.days)]),
     t:[c.dayStart||'',c.dayEnd||'',dayStr(c.dayDays)]};
 }
+/* Packed order: school, first/last day, holiday ranges, attendance, class rows.
+   Text is UTF-8 with a one-byte length. Dates and times are little-endian
+   16-bit day/minute numbers, and weekdays occupy one bit each. */
+function packShare(o){
+  if(o.h.length>255||o.c.length>255)throw new RangeError('share count');
+  const bytes=[],encoder=new TextEncoder();
+  const word=n=>bytes.push(n&255,n>>>8);
+  const text=value=>{
+    const encoded=encoder.encode(value);
+    if(encoded.length>255)throw new RangeError('share text');
+    bytes.push(encoded.length,...encoded);
+  };
+  const day=value=>{
+    const d=parseDate(value);
+    if(!d){word(SHARE_EMPTY);return}
+    const n=Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/SHARE_DAY_MS;
+    if(!Number.isInteger(n)||n<0||n>=SHARE_EMPTY)throw new RangeError('share date');
+    word(n);
+  };
+  const timeRow=([start,end,days])=>{
+    word(toMin(start)??SHARE_EMPTY);word(toMin(end)??SHARE_EMPTY);
+    bytes.push(strDays(days).reduce((mask,d)=>mask|(1<<d),0));
+  };
+  text(o.n);day(o.s);day(o.e);bytes.push(o.h.length);
+  for(const range of o.h){const [first,last=first]=range.split('~');day(first);day(last)}
+  timeRow(o.t);bytes.push(o.c.length);
+  for(const [name,start,end,days] of o.c){text(name);timeRow([start,end,days])}
+  return Uint8Array.from(bytes);
+}
+function unpackShare(bytes){
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),decoder=new TextDecoder('utf-8',{fatal:true});
+  let offset=0;
+  const byte=()=>view.getUint8(offset++);
+  const word=()=>{const n=view.getUint16(offset,true);offset+=2;return n};
+  const text=()=>{
+    const length=byte(),end=offset+length;
+    if(end>bytes.length)throw new RangeError('share text');
+    const value=decoder.decode(bytes.subarray(offset,end));offset=end;return value;
+  };
+  const day=()=>{const n=word();return n===SHARE_EMPTY?'':new Date(n*SHARE_DAY_MS).toISOString().slice(0,10)};
+  const time=()=>{const n=word();return n<1440?fmtMin(n):''};
+  const timeRow=()=>{
+    const start=time(),end=time(),mask=byte();
+    return [start,end,dayStr(DAYS.filter(d=>mask&(1<<d)))];
+  };
+  const o={v:1,n:text(),s:day(),e:day(),h:[],c:[]};
+  const holidays=byte();
+  for(let i=0;i<holidays;i++){
+    const first=day(),last=day();
+    if(!first||!last)throw new Error('share holiday');
+    o.h.push(first===last?first:first+'~'+last);
+  }
+  o.t=timeRow();
+  const classes=byte();
+  for(let i=0;i<classes;i++)o.c.push([text(),...timeRow()]);
+  if(offset!==bytes.length)throw new Error('share length');
+  return o;
+}
 async function encodeShare(c){
-  const bytes=new TextEncoder().encode(JSON.stringify(sharePayload(c)));
-  if(typeof CompressionStream==='function'){try{return 'TM1.'+b64u(await pipeBytes(bytes,new CompressionStream('deflate-raw')))}catch(e){}}
-  return 'TM0.'+b64u(bytes);
+  const payload=sharePayload(c),legacy=new TextEncoder().encode(JSON.stringify(payload));
+  const candidates=[[0,legacy]];
+  try{candidates.push([2,packShare(payload)])}catch(e){} // Older or unusually large dates can use JSON.
+  let [tag,best]=candidates[0];
+  for(const [kind,bytes] of candidates){
+    if(bytes.length<best.length){tag=kind;best=bytes}
+    if(typeof CompressionStream==='function'){
+      try{
+        const zipped=await pipeBytes(bytes,new CompressionStream('deflate-raw'));
+        if(zipped.length<best.length){tag=kind+1;best=zipped}
+      }catch(e){}
+    }
+  }
+  return 'TM'+tag+'.'+b64u(best);
 }
 async function decodeShare(text){
   const input=String(text||'').slice(0,60000);
-  const pattern=/TM([01])\.([A-Za-z0-9_-]+)/;
+  const pattern=/TM([0-3])\.([A-Za-z0-9_-]+)/;
   const intact=pattern.exec(input);
   const compact=pattern.exec(input.replace(/\s+/g,''));
   if(intact&&compact&&intact[0]!==compact[0]){
@@ -1932,11 +2005,13 @@ async function decodeShare(text){
 async function decodeShareToken(m){
   if(!m)throw new Error('format');
   let bytes=unb64u(m[2]);
-  if(m[1]==='1'){
+  const kind=Number(m[1]);
+  if(kind%2){
     if(typeof DecompressionStream!=='function')throw new Error('inflate');
     bytes=await pipeBytes(bytes,new DecompressionStream('deflate-raw'));
   }
-  const o=JSON.parse(new TextDecoder().decode(bytes));
+  if(bytes.length>65536)throw new RangeError('share payload');
+  const o=kind>=2?unpackShare(bytes):JSON.parse(new TextDecoder().decode(bytes));
   if(!o||o.v!==1)throw new Error('version');
   const clock=v=>{const x=toMin(typeof v==='string'?v:'');return x!=null&&x<1440?fmtMin(x):''};
   const s0=parseDate(o.s),e0=parseDate(o.e);
@@ -1954,30 +2029,44 @@ async function decodeShareToken(m){
 let shareSeq=0,lastSharePayload='';
 function scheduleShare(){
   if(!draft)return;
-  const p=JSON.stringify(sharePayload(draft));if(p===lastSharePayload)return;
+  const p=period+JSON.stringify(sharePayload(draft));if(p===lastSharePayload)return;
+  const marker=isYear()?'y':'t';
   lastSharePayload=p;const seq=++shareSeq;
   const output=$('f-share-out'),copy=$('btn-share-copy');
   output.value='';copy.disabled=true;
   encodeShare(draft).then(code=>{
     if(seq!==shareSeq)return;
-    output.value=code;copy.disabled=false;
+    output.value=SHARE_URL+'#'+marker+code;copy.disabled=false;
   }).catch(()=>{
     if(seq===shareSeq)lastSharePayload='';
   });
 }
 function setShareStatus(msg,err){const p=$('share-status');p.textContent=msg||'';p.hidden=!msg;p.className='imp-status'+(err?' err':'')}
 $('btn-share-copy').addEventListener('click',()=>{
-  const el=$('f-share-out'),code=el.value;if(!code)return;
+  const el=$('f-share-out'),link=el.value;if(!link)return;
   const manual=()=>{el.focus();el.select();setShareStatus(t('shSelect'))};
-  try{navigator.clipboard.writeText(code).then(()=>{setShareStatus('');toast(t('shCopied'))},manual)}catch(e){manual()}
+  try{navigator.clipboard.writeText(link).then(()=>{setShareStatus('');toast(t('shCopied'))},manual)}catch(e){manual()}
 });
+function offerSharedLink(){
+  const hash=window.location?.hash||'';
+  if(hash.length>60000||!SHARE_HASH.test(hash))return;
+  openSettings();
+  $('f-share-in').value=SHARE_URL+hash;
+  setShareStatus(t('shLinkReady'));
+  $('btn-share-import').focus();
+}
 async function importShare(){
   const raw=$('f-share-in').value.trim();
   if(!raw){setShareStatus(t('shEmpty'),true);$('f-share-in').focus();return}
   const target=draft;
+  const link=/https:\/\/safeschooltime\.xyz\/#([ty])(TM[0-3]\.[A-Za-z0-9_-]+)/.exec(raw);
   let got;
-  try{got=await decodeShare(raw)}catch(e){if(draftIsOpen(target))setShareStatus(t('shBad'),true);return}
+  try{got=await decodeShare(link?link[2]:raw)}catch(e){if(draftIsOpen(target))setShareStatus(t('shBad'),true);return}
   if(!draftIsOpen(target))return;
+  if(link){
+    const destination=link[1]==='y'?'year':'term';
+    if(destination!==period){setPeriod(destination);openSettings()}
+  }
   readForm();
   Object.assign(draft,got);
   if(!draft.dayStart)draft.dayStart='08:00';
@@ -1985,6 +2074,9 @@ async function importShare(){
   fillForm();
   const label=got.school||(got.start&&got.end?fmtRange({from:got.start,to:got.end}):'—');
   setShareStatus(t('shDone',{n:label,h:rangesOf(hset).length,c:got.sessions.length}));
+  if(SHARE_HASH.test(window.location?.hash||'')){
+    try{window.history.replaceState(window.history.state,'',window.location.pathname+window.location.search)}catch(e){}
+  }
 }
 $('btn-share-import').addEventListener('click',importShare);
 $('f-share-in').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();importShare()}});
@@ -2028,6 +2120,8 @@ document.addEventListener('visibilitychange',wake);document.addEventListener('cl
 
 window.__tm={build,setTheme,setMode,setLang,parseICS,parseIcsTimetable,encodeShare,decodeShare,findNext:x=>findNext(x),rangesOf,I18N,stateAt:x=>stateAt(x),get model(){return model},get cfg(){return cfg}};
 applyI18n();renderStatic();render();setInterval(render,50);
+window.addEventListener('hashchange',offerSharedLink);
+offerSharedLink();
 })();
 </script>
 </body>
