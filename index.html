@@ -545,10 +545,11 @@ details.manual textarea{margin:8px 0 4px}
 
 <dialog class="period-dialog" id="period-dialog" aria-labelledby="period-dialog-title" aria-describedby="period-dialog-message">
   <h2 id="period-dialog-title"></h2>
-  <p id="period-dialog-message" data-i18n="periodSwitchMessage">切换后需要重新设置学费和课表。如果之前设置过该周期，可以核对后继续使用。</p>
+  <p id="period-dialog-message"></p>
   <div class="period-actions">
     <button type="button" class="btn" id="btn-period-cancel" data-i18n="periodSwitchCancel" autofocus>取消</button>
-    <button type="button" class="btn primary" id="btn-period-switch" data-i18n="periodSwitchConfirm">确认切换</button>
+    <button type="button" class="btn primary" id="btn-period-switch">确认切换</button>
+    <button type="button" class="btn primary" id="btn-period-save" data-i18n="periodSwitchSave" hidden>保存并切换</button>
   </div>
 </dialog>
 
@@ -577,9 +578,13 @@ periodAria:['计费周期','計費週期','Billing period','課金期間','과�
 periodTerm:['按学期','按學期','By term','学期単位','학기 단위'],
 periodYear:['按学年','按學年','By school year','学年単位','학년 단위'],
 periodSwitchTitle:['切换到「{period}」？','切換到「{period}」？','Switch to “{period}”?','「{period}」に切り替えますか？','“{period}”로 전환할까요?'],
-periodSwitchMessage:['切换后需要重新设置学费和课表。如果之前设置过该周期，可以核对后继续使用。','切換後需要重新設定學費和課表。如果之前設定過該週期，可以確認後繼續使用。','Set tuition and the timetable for the new period. If you have settings saved for that period, review them and keep using them.','切り替え後は、学費と時間割の設定が必要です。保存済みの設定があれば、内容を確認して引き続き使えます。','전환한 기간의 등록금과 시간표를 설정해 주세요. 저장된 설정이 있으면 확인한 뒤 계속 사용할 수 있습니다.'],
+periodSwitchMessage:['首次使用这个周期，需要设置学费和课表。','首次使用這個週期，需要設定學費和課表。','Set tuition and the timetable for this period on first use.','この期間を初めて使う場合は、学費と時間割を設定してください。','이 기간을 처음 사용하려면 등록금과 시간표를 설정해 주세요.'],
+periodSwitchUnsaved:['当前周期有未保存的修改。','目前週期有未儲存的修改。','This period has unsaved changes.','現在の期間に未保存の変更があります。','현재 기간에 저장하지 않은 변경사항이 있습니다.'],
 periodSwitchCancel:['取消','取消','Cancel','キャンセル','취소'],
 periodSwitchConfirm:['确认切换','確認切換','Switch','切り替える','전환'],
+periodSwitchKeep:['保留草稿并切换','保留草稿並切換','Keep draft and switch','下書きを残して切り替える','초안을 보관하고 전환'],
+periodSwitchSave:['保存并切换','儲存並切換','Save and switch','保存して切り替える','저장하고 전환'],
+periodSwitchSaved:['已保存刚才的修改','已儲存剛才的修改','Previous changes saved.','切り替え前の変更を保存しました。','전환 전 변경사항을 저장했습니다.'],
 modeClass:['按课表','按課表','Classes only','授業のみ','수업만'],
 modeDay:['全天在校','全天在校','All day','終日','종일'],
 settingsBtn:['设置学费和课表','設定學費和課表','Set tuition & schedule','学費と時間割を設定','등록금·시간표 설정'],
@@ -866,10 +871,15 @@ mySchool:['我的学费','我的學費','My tuition','自分の学費','내 등�
 
 const STORE='tuition-meter-v1',LANG_STORE='tuition-meter-lang',DRAFT_STORE='tuition-meter-draft';
 const PERIOD_STORE='tuition-meter-period';
-let period='term';
-try{if(localStorage.getItem(PERIOD_STORE)==='year')period='year'}catch(e){}
+let period='term',hasSwitchedPeriod=false;
+try{
+  const previous=localStorage.getItem(PERIOD_STORE);
+  // The period preference is written only on a switch, so both periods have been used.
+  hasSwitchedPeriod=previous==='term'||previous==='year';
+  if(previous==='year')period='year';
+}catch(e){}
 const isYear=()=>period==='year';
-const periodStorageKey=key=>isYear()?key+'-year':key;
+const periodStorageKey=(key,forPeriod=period)=>forPeriod==='year'?key+'-year':key;
 const DAYS=[1,2,3,4,5,6,0]; // Monday first
 const CURRENCIES=new Map([
   ['CNY','¥'],['USD','US$'],['JPY','JP¥'],['KRW','₩'],
@@ -954,8 +964,8 @@ function norm(c){
 }
 /* the example follows the page language; the owner's own data is never touched */
 function localizeExample(c){if(!c.example)return c;const d=defaultCfg();d.mode=c.mode;return d}
-function loadConfig(key){
-  try{const c=JSON.parse(localStorage.getItem(periodStorageKey(key)));if(c&&typeof c==='object')return norm(c)}catch(e){}
+function loadConfig(key,forPeriod=period){
+  try{const c=JSON.parse(localStorage.getItem(periodStorageKey(key,forPeriod)));if(c&&typeof c==='object')return norm(c)}catch(e){}
   return null;
 }
 function save(c){try{localStorage.setItem(periodStorageKey(STORE),JSON.stringify(c))}catch(e){}}
@@ -1264,27 +1274,56 @@ applyDesktopLayout();
 
 /* ---------- switching billing period or billing mode ---------- */
 const periodSelect=$('billing-period'),periodDialog=$('period-dialog');
+const periodSwitchButton=$('btn-period-switch'),periodSaveButton=$('btn-period-save');
 $('btn-period-cancel').addEventListener('click',()=>periodDialog.close());
-$('btn-period-switch').addEventListener('click',()=>periodDialog.close('switch'));
+periodSwitchButton.addEventListener('click',()=>periodDialog.close('switch'));
+periodSaveButton.addEventListener('click',()=>periodDialog.close('save'));
+
+function confirmPeriodSwitch(next,firstUse,dirty){
+  const error=dirty?build(draft).error:null;
+  const messages=[];
+  if(dirty)messages.push(t('periodSwitchUnsaved'));
+  if(error)messages.push(t(error));
+  if(firstUse)messages.push(t('periodSwitchMessage'));
+  $('period-dialog-title').textContent=t('periodSwitchTitle',{period:t(next==='year'?'periodYear':'periodTerm')});
+  $('period-dialog-message').textContent=messages.join(' ');
+  periodSwitchButton.textContent=t(dirty?'periodSwitchKeep':'periodSwitchConfirm');
+  periodSwitchButton.classList.toggle('primary',!dirty||Boolean(error));
+  periodSaveButton.hidden=!dirty;
+  periodSaveButton.disabled=Boolean(error);
+  periodDialog.returnValue='';
+  return new Promise(resolve=>{
+    periodDialog.addEventListener('close',()=>resolve(periodDialog.returnValue),{once:true});
+    periodDialog.showModal();
+  });
+}
 
 async function switchPeriod(next){
   if(next===period)return true;
-  if(periodDialog.open||(next!=='term'&&next!=='year'))return false;
   const target=draft;
-  $('period-dialog-title').textContent=t('periodSwitchTitle',{period:t(next==='year'?'periodYear':'periodTerm')});
-  periodDialog.returnValue='';
-  const answer=new Promise(resolve=>{
-    periodDialog.addEventListener('close',()=>resolve(periodDialog.returnValue==='switch'),{once:true});
-  });
-  periodDialog.showModal();
-  if(!await answer||!draftIsOpen(target))return false;
-  readForm();persistDraft();closeSettings();
+  if(periodDialog.open||!draftIsOpen(target)||(next!=='term'&&next!=='year'))return false;
+  const firstUse=!hasSwitchedPeriod&&!loadConfig(STORE,next)&&!loadConfig(DRAFT_STORE,next);
+  const dirty=hasDraftChanges();
+  let saved=false;
+  if(firstUse||dirty){
+    const answer=await confirmPeriodSwitch(next,firstUse,dirty);
+    if(!answer||!draftIsOpen(target))return false;
+    if(answer==='save'){
+      if(!saveDraft())return false;
+      saved=true;
+    }else if(dirty){
+      persistDraft();
+    }
+  }
+  closeSettings();
   period=next;
+  hasSwitchedPeriod=true;
   try{localStorage.setItem(PERIOD_STORE,period)}catch(e){}
   ({cfg,model}=loadPeriod());
   draft=null;offset=0;demo=false;wkOffset=0;
   applyI18n();renderStatic();render();
   openSettings();
+  if(saved)toast(t('periodSwitchSaved'));
   return true;
 }
 periodSelect.addEventListener('change',()=>{
@@ -1309,12 +1348,13 @@ const draftIsOpen=target=>target&&draft===target&&!$('drawer').hidden;
    (in this browser), so closing the panel or reloading mid-edit does not lose them: the panel
    reopens where the person left off, with a way to throw those edits away. */
 function clearDraft(){try{localStorage.removeItem(periodStorageKey(DRAFT_STORE))}catch(e){}}
+function hasDraftChanges(){return draft&&JSON.stringify(draft)!==JSON.stringify(norm(clone(cfg)))}
 function persistDraft(){
   if(!draft)return;
   try{
     const key=periodStorageKey(DRAFT_STORE);
-    if(JSON.stringify(draft)===JSON.stringify(norm(clone(cfg))))localStorage.removeItem(key);
-    else localStorage.setItem(key,JSON.stringify(draft));
+    if(hasDraftChanges())localStorage.setItem(key,JSON.stringify(draft));
+    else localStorage.removeItem(key);
   }catch(e){}
 }
 function dayBoxes(prefix,suffix,checked){ // seven weekday toggles, Monday first
@@ -1437,11 +1477,16 @@ $('btn-reset').addEventListener('click',()=>{const m=draft.mode;draft=defaultCfg
 $('btn-draft-discard').addEventListener('click',()=>{clearDraft();draft=norm(clone(cfg));$('draft-note').hidden=true;fillForm()});
 /* Save runs from the button's click, never from a form submission: the frame a published page
    runs in can block submissions outright, and then the submit event never fires at all. */
+function saveDraft(){
+  readForm();const m=build(draft);if(m.error){preview();return false}
+  draft.example=JSON.stringify(Object.assign({},draft,{example:true,mode:'class'}))===JSON.stringify(defaultCfg());
+  cfg=draft;model=m;save(cfg);clearDraft();offset=0;demo=false;
+  return true;
+}
 $('form').addEventListener('submit',e=>e.preventDefault());
 $('btn-save').addEventListener('click',()=>{
-  readForm();const m=build(draft);if(m.error){preview();return}
-  draft.example=JSON.stringify(Object.assign({},draft,{example:true,mode:'class'}))===JSON.stringify(defaultCfg());
-  cfg=draft;model=m;save(cfg);clearDraft();offset=0;demo=false;renderStatic();render();closeSettings();toast(t('saved'));
+  if(!saveDraft())return;
+  renderStatic();render();closeSettings();toast(t('saved'));
 });
 $('btn-settings').addEventListener('click',()=>openSettings());
 $('btn-settings-2').addEventListener('click',()=>openSettings());
