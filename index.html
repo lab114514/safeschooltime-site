@@ -135,6 +135,7 @@ h2{margin:0;font-size:17px;font-weight:700}
 .scrim{position:fixed;inset:0;background:var(--scrim);z-index:20;display:flex;justify-content:flex-end}
 .panel{background:var(--surface);width:min(560px,100%);height:100%;overflow-y:auto;padding-block:calc(20px + env(safe-area-inset-top,0px)) calc(24px + env(safe-area-inset-bottom,0px));padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px;box-shadow:-8px 0 30px rgba(0,0,0,.2)}
 .panel-head{display:flex;justify-content:space-between;align-items:center}
+.panel-privacy{margin:0;color:var(--muted);font-size:13px}
 .field{display:flex;flex-direction:column;gap:6px;min-width:0}
 .field>span{font-size:13px;font-weight:600}
 .field small{color:var(--muted);font-size:12px}
@@ -408,6 +409,7 @@ details.manual textarea{margin:8px 0 4px}
       <h2 data-i18n="sTitle">学费和课表</h2>
       <button type="button" class="btn" id="btn-close" data-i18n="close">关闭</button>
     </div>
+    <p class="panel-privacy" data-i18n="settingsPrivacy">数据只保存在本地不上传至云端</p>
     <p class="note" id="draft-note" hidden><span data-i18n="draftNote">已恢复上次没保存的修改，可以接着改。</span> <button type="button" id="btn-draft-discard" data-i18n="draftDiscard">放弃这些修改</button></p>
     <div class="sharebox" id="f-share">
       <span data-i18n="shTitle">分享课表</span>
@@ -672,6 +674,7 @@ mDay:['计算方式：总学费 {t} ÷ {d} 个在校日里共 {h} 小时的在�
 mLocal:[' 数据只存在你自己的浏览器里。',' 資料只存在你自己的瀏覽器裡。',' Your data stays in your own browser.',' データはあなたのブラウザにだけ保存されます。',' 데이터는 내 브라우저에만 저장됩니다.'],
 
 /* settings */
+settingsPrivacy:['数据只保存在本地不上传至云端','資料只儲存在本機，不會上傳至雲端','Your data stays in this browser and is never uploaded to the cloud.','データはこのブラウザ内にのみ保存され、クラウドにはアップロードされません。','데이터는 이 브라우저에만 저장되며 클라우드에 업로드되지 않습니다.'],
 sTitle:['学费和课表','學費和課表','Tuition & schedule','学費と時間割','등록금과 시간표'],
 close:['关闭','關閉','Close','閉じる','닫기'],
 fSchool:['学校 / 学期名称','學校 / 學期名稱','School / term name','学校・学期名','학교 / 학기 이름'],
