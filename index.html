@@ -137,6 +137,11 @@ h2{margin:0;font-size:17px;font-weight:700}
 .panel-head{display:flex;align-items:center;gap:12px}
 .panel-head h2,.panel-head .btn{flex-shrink:0}
 .panel-privacy{min-width:0;margin:0 auto 0 0;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.period-field{width:min(100%,220px)}
+.period-dialog{width:min(420px,calc(100% - 32px));padding:20px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink)}
+.period-dialog::backdrop{background:var(--scrim)}
+.period-dialog p{margin:10px 0 18px;color:var(--muted)}
+.period-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px}
 .field{display:flex;flex-direction:column;gap:6px;min-width:0}
 .field>span{font-size:13px;font-weight:600}
 .field small{color:var(--muted);font-size:12px}
@@ -316,10 +321,6 @@ details.manual textarea{margin:8px 0 4px}
         <option value="vertical" data-i18n="layoutVertical">竖版</option>
         <option value="horizontal" data-i18n="layoutHorizontal">横版</option>
       </select>
-      <select class="lang" id="billing-period" data-i18n-aria="periodAria" aria-label="计费周期">
-        <option value="term" data-i18n="periodTerm">按学期</option>
-        <option value="year" data-i18n="periodYear">按学年</option>
-      </select>
       <div class="seg" role="group" data-i18n-aria="modeAria" aria-label="计费方式">
         <button type="button" id="mode-class" aria-pressed="true" data-i18n="modeClass">按课表</button>
         <button type="button" id="mode-day" aria-pressed="false" data-i18n="modeDay">全天在校</button>
@@ -412,6 +413,13 @@ details.manual textarea{margin:8px 0 4px}
       <button type="button" class="btn" id="btn-close" data-i18n="close">关闭</button>
     </div>
     <p class="note" id="draft-note" hidden><span data-i18n="draftNote">已恢复上次没保存的修改，可以接着改。</span> <button type="button" id="btn-draft-discard" data-i18n="draftDiscard">放弃这些修改</button></p>
+    <label class="field period-field">
+      <span data-i18n="periodAria">计费周期</span>
+      <select class="in" id="billing-period">
+        <option value="term" data-i18n="periodTerm">按学期</option>
+        <option value="year" data-i18n="periodYear">按学年</option>
+      </select>
+    </label>
     <div class="sharebox" id="f-share">
       <span data-i18n="shTitle">分享课表</span>
       <small data-i18n="shHint"></small>
@@ -535,6 +543,15 @@ details.manual textarea{margin:8px 0 4px}
   </form>
 </div>
 
+<dialog class="period-dialog" id="period-dialog" aria-labelledby="period-dialog-title" aria-describedby="period-dialog-message">
+  <h2 id="period-dialog-title"></h2>
+  <p id="period-dialog-message" data-i18n="periodSwitchMessage">切换后需要重新设置学费和课表。如果之前设置过该周期，可以核对后继续使用。</p>
+  <div class="period-actions">
+    <button type="button" class="btn" id="btn-period-cancel" data-i18n="periodSwitchCancel" autofocus>取消</button>
+    <button type="button" class="btn primary" id="btn-period-switch" data-i18n="periodSwitchConfirm">确认切换</button>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -559,6 +576,10 @@ modeAria:['计费方式','計費方式','Billing mode','課金方式','과금 �
 periodAria:['计费周期','計費週期','Billing period','課金期間','과금 기간'],
 periodTerm:['按学期','按學期','By term','学期単位','학기 단위'],
 periodYear:['按学年','按學年','By school year','学年単位','학년 단위'],
+periodSwitchTitle:['切换到「{period}」？','切換到「{period}」？','Switch to “{period}”?','「{period}」に切り替えますか？','“{period}”로 전환할까요?'],
+periodSwitchMessage:['切换后需要重新设置学费和课表。如果之前设置过该周期，可以核对后继续使用。','切換後需要重新設定學費和課表。如果之前設定過該週期，可以確認後繼續使用。','Set tuition and the timetable for the new period. If you have settings saved for that period, review them and keep using them.','切り替え後は、学費と時間割の設定が必要です。保存済みの設定があれば、内容を確認して引き続き使えます。','전환한 기간의 등록금과 시간표를 설정해 주세요. 저장된 설정이 있으면 확인한 뒤 계속 사용할 수 있습니다.'],
+periodSwitchCancel:['取消','取消','Cancel','キャンセル','취소'],
+periodSwitchConfirm:['确认切换','確認切換','Switch','切り替える','전환'],
 modeClass:['按课表','按課表','Classes only','授業のみ','수업만'],
 modeDay:['全天在校','全天在校','All day','終日','종일'],
 settingsBtn:['设置学费和课表','設定學費和課表','Set tuition & schedule','学費と時間割を設定','등록금·시간표 설정'],
@@ -1241,17 +1262,36 @@ layoutMenu.addEventListener('change',()=>{
 wideLayout.addEventListener('change',applyDesktopLayout);
 applyDesktopLayout();
 
-/* ---------- switching period or billing mode from the main page ---------- */
-function setPeriod(next){
-  if(next===period||(next!=='term'&&next!=='year'))return;
-  if(!$('drawer').hidden)closeSettings();
+/* ---------- switching billing period or billing mode ---------- */
+const periodSelect=$('billing-period'),periodDialog=$('period-dialog');
+$('btn-period-cancel').addEventListener('click',()=>periodDialog.close());
+$('btn-period-switch').addEventListener('click',()=>periodDialog.close('switch'));
+
+async function switchPeriod(next){
+  if(next===period)return true;
+  if(periodDialog.open||(next!=='term'&&next!=='year'))return false;
+  const target=draft;
+  $('period-dialog-title').textContent=t('periodSwitchTitle',{period:t(next==='year'?'periodYear':'periodTerm')});
+  periodDialog.returnValue='';
+  const answer=new Promise(resolve=>{
+    periodDialog.addEventListener('close',()=>resolve(periodDialog.returnValue==='switch'),{once:true});
+  });
+  periodDialog.showModal();
+  if(!await answer||!draftIsOpen(target))return false;
+  readForm();persistDraft();closeSettings();
   period=next;
   try{localStorage.setItem(PERIOD_STORE,period)}catch(e){}
   ({cfg,model}=loadPeriod());
   draft=null;offset=0;demo=false;wkOffset=0;
   applyI18n();renderStatic();render();
+  openSettings();
+  return true;
 }
-$('billing-period').addEventListener('change',e=>setPeriod(e.target.value));
+periodSelect.addEventListener('change',()=>{
+  const next=periodSelect.value;
+  periodSelect.value=period;
+  switchPeriod(next);
+});
 
 function setMode(m){
   if(cfg.mode===m)return;
@@ -1372,7 +1412,7 @@ function preview(){
   $('btn-save').disabled=false;
 }
 function onFormChange(e){
-  if(!draftIsOpen(draft))return;
+  if(e.target===periodSelect||!draftIsOpen(draft))return;
   readForm();
   if(e.target.id==='f-currency-code')syncCurrencyField();
   if(e&&e.target&&e.target.id==='f-holidays'){hset=parseHolidays(draft.holidays).set;renderChips()}
@@ -1408,7 +1448,7 @@ $('btn-settings-2').addEventListener('click',()=>openSettings());
 $('btn-share-2').addEventListener('click',()=>{openSettings();$('f-share-in').focus()});
 $('btn-close').addEventListener('click',closeSettings);
 $('drawer').addEventListener('click',e=>{if(e.target===$('drawer'))closeSettings()});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').hidden)closeSettings()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!periodDialog.open&&!$('drawer').hidden)closeSettings()});
 
 /* ---------- holidays: click-to-pick calendar ---------- */
 let hset=new Set(),calMonth=null,lastPick=null;
@@ -2069,7 +2109,7 @@ async function importShare(){
   if(!draftIsOpen(target))return;
   if(link){
     const destination=link[1]==='y'?'year':'term';
-    if(destination!==period){setPeriod(destination);openSettings()}
+    if(destination!==period&&!await switchPeriod(destination))return;
   }
   readForm();
   Object.assign(draft,got);
