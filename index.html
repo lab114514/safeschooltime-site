@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>学费计价器</title>
+<link rel="icon" type="image/png" sizes="128x128" href="tuition-icon.png">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -58,6 +59,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 /* header */
 .top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
 .eyebrow{font-family:var(--font-num);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.site-brand{display:flex;align-items:center;gap:10px;min-width:0}
+.site-brand img{flex:none}
 h1{margin:2px 0 0;font-size:clamp(20px,3.4vw,26px);font-weight:700;letter-spacing:.01em;text-wrap:balance}
 .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .lang{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px}
@@ -299,9 +302,12 @@ details.manual textarea{margin:8px 0 4px}
 <body>
 <div class="wrap">
   <header class="top">
-    <div>
-      <div class="eyebrow" data-i18n="title">学费计价器</div>
-      <h1 id="school-name">示例大学</h1>
+    <div class="site-brand">
+      <img src="tuition-icon.png" width="42" height="42" alt="">
+      <div>
+        <div class="eyebrow" data-i18n="title">学费计价器</div>
+        <h1 id="school-name">示例大学</h1>
+      </div>
     </div>
     <div class="actions">
       <select class="lang" id="lang" data-i18n-aria="langAria" aria-label="语言">
